@@ -1,0 +1,946 @@
+---
+title: "Analyse de la variance (ANOVA) à un facteur"
+author: "Mathilde Boissel"
+date: "11/10/2020"
+output: word_document
+toc: true 
+toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(tidyverse)
+```
+
+```{r logo-udl, results="asis", echo = FALSE, fig.align='center'}
+knitr::include_graphics("./Images_includ/logo_univ-lille-large.png") 
+```
+
+\newpage 
+
+# Méthode
+
+## Test ANOVA
+
+### Hypothèses stochastiques {-}
+
+On étudie un caractère représenté par une variable $X \sim  \mathcal{N}(\mu, \sigma^2)$. Les échantillons sont issus d’une population normale (gaussienne) : on parle de test **paramétrique**.  
+_N.B.: l'ANOVA non paramétrique, avec le Test de Kruskal–Wallis, ne sera pas abordé dans ce cours._  
+
+On suppose que la population se divise en $p$ sous-population $\mathcal{P}_1, ..., \mathcal{P}_n$.  
+Ainsi, $\forall i \in \{1, .., p\}$, la variable $X$ considérée dans $\mathcal{P}_i$, est une variable 
+$$X_i \sim  \mathcal{N}(\mu_i, \sigma_i^2).$$
+
+La moyenne $\mu$, et a fortiori $\mu_i$, sont inconnus.  
+Les variances conditionnelles (variances dans chaque sous-population) sont identiques : **homoscédasticité**.  
+Les données sont constituées de, $\forall i \in \{1, .., n_i\}$, la valeur de $X_i$ pour chacun des $n_i$ individus d'un échantillon de $\mathcal{P}_i$. Ces valeurs sont notées $x_{i,1}, ..., x_{i,n_i}$ pour $X_i$.  
+Les individus sont tous différents; les échantillons sont indépendants.  
+
+
+### Enjeu {-}
+
+L'enjeu d'un test ANOVA est d'affirmer, avec un faible risque de se tromper, que $\mathcal{P}_1, ..., \mathcal{P}_n$ ne sont pas homogènes quant à $\mu$.  
+Pour ce faire, on compare les moyennes $\mu_1, ..., \mu_p$ via un test statistique.  
+
+### Notion de facteur {-}
+
+$\forall i \in \{1, .., p\}$, $\mathcal{P}_i$ peut être associée à une modalité $A_i$ d'un caractère $A$ appelé facteur.  
+Comparer $\mathcal{P}_1, ..., \mathcal{P}_n$ quant à $\mu$ revient à étudier l'influence du facteur $A$ (caractérisé par ses $p$ modalités $A_1, ..., A_p$) sur $\mu$.  
+$\mu$ est ici la moyenne d'une variable (numerique) d'intérêt $X$.  
+Les données de $X$ peuvent donc être mises sous la forme :  
+
+```{r tab-data, echo=FALSE, results='asis', fig.align='center'}
+tibble(
+  "A1" = c("$x_{1,1}$", "$x_{2,1}$", "...", "...", "...", "..."),
+  "A2" = c("$x_{1,2}$", "$x_{2,2}$", "...", "...", "...", "$x_{n_2, 2}$"),
+  "Ai" = c("$x_{1,i}$", "$x_{2,i}$", "$x_{j,i}$", "...", "...", "..."),
+  "Ap" = c("$x_{1,p}$", "$x_{1,p}$", "...", "", "...", "$x_{p,n_p}$"),
+) %>% 
+  kable()
+  # kable(full_width = F)
+```
+ 
+### Hypothèses {-}
+Les hypothèses associées au test ANOVA sont : 
+
+<!-- \begin{center} -->
+<div align="center">
+$H_0 : \mu_1 = ... = \mu_p = \mu$ ($A$ n'influe pas sur $X$)  
+contre  
+$H_1 : \exists j, \mu_j \ne \mu$ (il existe au moins 2 moyennes différentes, c-à-d $A$ influe sur $X$). 
+</div> 
+<!-- \end{center} -->
+
+En d'autres mots, l'hypothèse nulle indique que la moyenne de la variable dépendante ($X$) est la même quelque soit les groupes ($A_i$) définis par le facteur ($A$). Sous $H_0$, le facteur $A$ n ’a aucune influence sur la variable dépendante $X$. 
+
+
+### Illustrations {-}
+
+Des représentations graphiques des données peuvent aider à appréhender la solution. 
+
+```{r anova-illustration-1, echo=FALSE, fig.align='center'}
+## + here plot density ? to check normality ? 
+ggplot(data = iris, mapping = aes(x = Species, y = Sepal.Length, color = Species)) + 
+  geom_boxplot() +
+  geom_jitter(shape = 21, position = position_jitter(0.2)) + 
+  stat_summary(fun = mean, geom = "point", shape = 20, color = "firebrick2", fill = "firebrick2", size = 3) +
+  scale_color_viridis_d(end = 0.8) + 
+  theme_bw() + 
+  labs(title = "Longueur des sepales ~ des espèces")
+```
+
+### Objectif {-}
+
+On veut décider du rejet de $H_0$, au risque $\alpha / 100, \alpha \in \mathopen{]}0,1\mathopen{[}$. 
+
+### Test ANOVA {-}
+
++ Test statistique : On utilise alors le test ANOVA, lequel suppose que $\sigma_1^2, ... = \sigma_p^2$.  
+Sa construction repose sur la loi de Fisher $\mathcal{F}(\upsilon_1, \upsilon_2)$.  
+
+\newpage 
+
++ Calculs : Le test ANOVA se met en oeuvre en calculant :  
+
+  + n : l'effectif total :  
+  
+  $$\sum_{i=1}^{p} n_i$$ 
+  
+  + $\bar x$ : la moyenne totale :  
+  
+  $$\bar x = \dfrac{1}{n} \sum_{i=1}^{p} \sum_{j=1}^{n_i} x_{i,j}$$  
+  
+  + $\bar x_i, i \in \{1, .., p\}$ : la moyenne de $x_{i,1}, ..., x_{i,n_i}$ :  
+  
+  $$\bar x_i = \dfrac{1}{n_i} \sum_{j=1}^{n_i} x_{i,j}$$  
+  
+  + sce = sommes des carrés des écarts :  
+  
+  $$sce_T = sce_F + sce_R,$$
+  
+  + ddl = degrés de liberté :  
+  
+  $$ddl_T = ddl_F + ddl_R,$$
+  
+  + cm = carrés moyens $cm_F$ et $cm_R$,  
+  
+  + le $f_{obs}$ défini par 
+  
+  $$f_{obs} = \dfrac{cm_F}{cm_R}.$$
+  
+  + le réel $f_\alpha(\upsilon_1, \upsilon_2)$ vérifiant  
+  
+  $$\mathbb{P}(F \ge f_\alpha(\upsilon_1, \upsilon_2)) = \alpha,$$
+  
+  où $F \sim \mathcal{F}(\upsilon_1, \upsilon_2)$, $(\upsilon_1, \upsilon_2) = (ddl_F, ddl_R) = (p-1, n-p)$.  
+  Si $\alpha = 0.05$, ce réel est évaluable dans la table ANNEXE 6 (Loi de Fisher II). 
+  
+  + Le tableau ANOVA récapitule tout ceci :  
+
+```{r tableau_anova, echo=FALSE, fig.cap="Tableau ANOVA", out.width = '100%', fig.align='center'}
+knitr::include_graphics("./Images_includ/tableau anova.png") 
+```
+  
++ Règles de décision : La règle de décision associée au
+Si $f_{obs} \ge f_\alpha(\upsilon_1, \upsilon_2)$,  
+Alors on rejette $H_0$.  
+
++ p-valeurs : La p-valeur associée au test ANOVA est  
+
+$$p-valeur = \mathbb{P}(F\ge f_{obs}).$$
+
+On peut alors déterminer le degré de significativité du rejet de $H_0$.  
+Par exemple, si $p-valeur = \mathbb{P}(F\ge f_{obs}) < 0.001$, 
+alors le rejet de $H_0$ est hautement significatif (peut-être symbolisé par ***). 
+
+\newpage 
+
+## Diagnostique
+
+### Hypothèses stochastiques {-}
+
+Dans le même contexte décrit pour le test ANOVA. 
+
+### Enjeu {-}
+
+On s'intéresse ici aux diagnostiques qui permettent d'attester que les résultats de l'anova sont valides. 
+Quatre éléments sont à contrôler. Cela peut se faire graphiquement.  
+
+### Hypothèses {-}
+
+On considère les hypothèses : 
+
++ **Residuals vs Fitted** et **Constant Leverage: Residuals vs Factor Levels**  
+
+Les résidus sont indépendants. Les résidus ne doivent pas être corrélés entre eux. De la même façon, les résidus ne doivent pas être corrélés au facteur étudié.
+On peut faire le test de Dubin-Watson pour vérifier l'autocorrélation des résidus mais souvent un contrôle graphique suffit.  
+
++ **Normal Q-Q**  
+
+Les résidus suivent une loi normale de moyenne 0. Pour vérifier cette hypothèse on peut faire un test de normalité comme le test de Shapiro-Wilk mais on préfère vérifier cela graphiquement avec un diagramme Quantile-Quantile (i.e. QQ-plot, graphique dans lequel les quantiles de deux distributions sont tracés l’un par rapport à l’autre).
+
++ **Scale-Location**  
+
+L’homogénéité des variances. Les résidus relatifs aux différentes modalités sont homogènes (ils ont globalement la même dispersion), autrement dit leur variance est constante.
+On peut vérifier cela graphiquement en représentant les résidus standardisés en fonction des valeurs prédites (les moyennes des différents traitements). En cas de doute on pourra aussi valider cette hypothèse avec un test statistique (Cochran, Bartlett, Levene...).
+
+
+### Illustrations {-}
+
+
+```{r fig-ecart-moy, echo=FALSE, fig.width=7, fig.height=7, fig.align='center'}
+set.seed(2912)
+dta_moy <- iris %>% 
+  group_by(Species) %>% 
+  summarise(mean.Sepal.Length = mean(Sepal.Length)) %>% 
+  ungroup() %>% 
+  mutate(NumSpecies = as.numeric(Species))
+dta <- left_join(
+  x = iris, 
+  y = dta_moy, 
+  by = "Species"
+) %>% 
+  mutate(
+    JitterSpecies = map_dbl(.x = Species, .f = function(x) {
+      as.numeric(x) + rnorm(length(x), sd = .1)
+    })
+  ) 
+dta <- left_join(
+  x = dta, 
+  y = dta %>% 
+    group_by(Species) %>% 
+    summarise(end.JitterSpecies = max(JitterSpecies)) %>% 
+    ungroup(), 
+  by = "Species"
+)
+
+ggplot(
+  data = dta, 
+  mapping = aes(x = JitterSpecies, y = Sepal.Length, color = Species)
+) + 
+  geom_point(shape = 21) +
+  geom_linerange(
+    mapping = aes(x = JitterSpecies, ymin = Sepal.Length, ymax = mean.Sepal.Length)
+  ) + 
+  geom_segment(
+    data = dta, 
+    mapping = aes(x = JitterSpecies, y = mean.Sepal.Length, xend = end.JitterSpecies, yend = mean.Sepal.Length, colour = "Means"),
+  ) +
+  scale_color_viridis_d(end = 0.8) +
+  scale_x_continuous(
+    breaks = dta_moy$NumSpecies,
+    labels = dta_moy$Species
+  ) +
+  labs(
+    title = "Etude de la longueur des sepales ~ des espèces",
+    x = "Species", y = "Ecarts à la moyenne"
+  ) + 
+  # theme(legend.position = "none") +
+  theme_bw()
+```
+
+```{r fig-diag, echo=TRUE, fig.width=7, fig.height=7, fig.align='center'}
+## run the anova in R
+anova <- aov(formula = Sepal.Length~Species, data = iris)
+## call print method by default
+anova 
+## call summary method 
+summary(anova) 
+## print 4 diag plots 
+par(mfrow=c(2, 2)); plot(anova) 
+```
+
+\newpage 
+
+### "Mauvais" diagnostique {-}
+
+Pour bien se rendre compte que ces précédents exemples sont signe de bon diagnostique, on peut les confronter à des graphiques qui devraient vous alarmer, signe de "mauvais" diagnostique.  
+
+Dans le graph **Residuals vs Fitted**, la ligne rouge n'est pas une droite horizontale proche de Y=0.     
+Dans le graph  **Normal Q-Q**, les points observés s'éloignent franchement de la droite théorique. (On pourrait aussi voir ce problème en faisant le graphique de densité des résidus, alors nous n'aurions certainement pas "une cloche" comme attendu avec le loi Normale)  
+
+```{r bad_diag, echo=FALSE, out.width = '100%', fig.align='center'}
+knitr::include_graphics("./Images_includ/bad_diag.PNG") 
+```
+
+Source : [R Cookbook](https://rc2e.com/linearregressionandanova)
+
+Dans le graph **Residuals vs Factor Levels**  ci-dessous, la valeur des résidus n'est pas rassurante quand on regarde les différents niveaux de facteur.  
+
+```{r bad_diag2, echo=FALSE, out.width = '100%', fig.align='center'}
+knitr::include_graphics("./Images_includ/bad_diag2.PNG") 
+```
+
+Source : [itl.nist.gov](https://www.itl.nist.gov/div898/handbook/pri/section2/pri24.htm)
+
+Dans ces cas là, il faut s'intérroger sur la nécessité d'appliquer une transformation (racine carré, log, etc) à notre prédicteur, changer de modèle, ou envisager les tests non-paramétriques. 
+
+\newpage 
+
+
+## Test de comparaison de variance
+
+### Hypothèses stochastiques {-}
+
+Dans le même contexte décrit pour le test ANOVA.  
+On s'intéresse ici à ce point en particulier : Les variances conditionnelles (variances dans chaque sous-population) sont identiques. On parle d'**homoscédasticité**. 
+
+### Enjeu {-}
+
+L'enjeu d'un test d'homogénéité pour $\sigma^2$ est d'affirmer, avec un faible risque de se tromper, que  $\mathcal{P}_1, ..., \mathcal{P}_n$ ne sont pas homogènes quant à $\sigma^2$.  
+Pour ce faire, on compare les variances $\sigma_1^2, ..., \sigma_p^2$ via un test statistique. 
+  
+### Hypothèses {-}
+
+On considère les hypothèses : 
+
+<div align="center">
+$H_0 : \sigma_1^2 = ... = \sigma_p^2 = \sigma$  
+contre  
+$H_1 : \exists j, \sigma_j \ne \sigma$ (il existe au moins 2 variances différentes)  
+</div>  
+
+### Objectif {-}
+
+On peut décider du rejet de $H_0$, au risque $\alpha / 100, \alpha \in \mathopen{]}0,1\mathopen{[}$. 
+
+Dans ce cas précis, on ne veut pas rejeter $H_0$ au risque 5%, puisqu'on souhaite vérifier l'égalité des variances. Par convention, on admet que $\sigma_1^2 = ... = \sigma_p^2$. 
+
+### Test de Cochran {-}
+
++ Test statistique : Si $n_1 = ... = n_p$, on utilise le test de Cochran.  
+N.B. : si $n_i \ne n_j$ voir test de Bartlett. 
+
++ Calculs : Le test de Cochran se met en oeuvre en calculant : 
+
+  + si, $i \in \{1, .., p\}$ : l'écart-type corrigé de $x_{i,1}, ..., x_{i,n_i}$  
+  
+  $$s_i^2 = \dfrac{1}{n_i - 1} \sum_{j=1}^{n_i} (x_{i,j} - \bar x_i)^2,$$ 
+  
+  + le $c_{obs}$ défini par  
+  
+  $$c_{obs} = \dfrac{max_{i\in\{1, .., p\}} s_i^2}{\sum_{i=1}^{p} s_i^2}$$
+  
+  + le réel $c(m,p)$ avec $m=n_1$ (l'effectif commun).  
+  Si $\alpha = 0.05$, ce réel est évaluable dans la table ANNEXE 7 (Valeurs de Cochran).  
+  
+  
++ Règles de décision : La règle de décision associées au test de Cochran est :  
+Si $c_{obs} \ge c(m,p)$,  
+Alors on rejette $H_0$.  
+Par exemple si $c_{obs} < c(m,p)$ et $\alpha = 0.05$, alors on ne rejette pas $H_0$ ; On admet que $\sigma_1^2 = ... = \sigma_p^2$. 
+
+
+### Test de Bartlett {-}
+
++ Test statistique : Si $min(n_1, ..., n_p) \ge 4$, on utilise le test de Bartlett. 
+
++ Calculs : Le test de Bartlett se met en oeuvre en calculant : 
+
+  + si, $i \in \{1, .., p\}$ : l'écart-type corrigé de $x_{i,1}, ..., x_{i,n_i}$  
+  
+  $$s_i^2 = \dfrac{1}{n_i - 1} \sum_{j=1}^{n_i} (x_{i,j} - \bar x_i)^2,$$ 
+  
+  + le $\chi_{obs}^2$ défini par  
+  
+  $$\chi_{obs}^2 = \dfrac{(n-p)ln(s^2) - \sum_{i=1}^{p} (n_i-1)ln(s_i^2)}{1+\dfrac{1}{3(p-1)}( (\sum_{i=1}^{p} \dfrac{1}{(n_i-1)}) - \dfrac{1}{(n-p)})}$$
+  
+  + le réel $\mathbb{P}(K \ge  \chi_\alpha^2(\upsilon)) = \alpha$ avec $K \sim  \chi^2 (\upsilon), \upsilon = p -1$.  
+  Si $\alpha = 0.05$, ce réel est évaluable dans la table ANNEXE 4 (Loi du Chi-deux). 
+  
+  
++ Règles de décision : La règle de décision associées au test de Bartlett est :  
+Si $\chi_{obs}^2 \ge \chi_{\alpha}^2(\upsilon)$,  
+Alors on rejette $H_0$.  
+
+\newpage 
+
+## Test de comparaison de moyennes
+
+### Hypothèses stochastiques {-}
+
+Dans le même contexte décrit pour le test ANOVA.  
+On s'intéresse ici à la suite de l'étude : la réalisation d'un test "post-hoc". 
+
+### Enjeu {-}
+
+Si le test ANOVA indique qu'au moins deux moyennes différent, il est intéressant d'étudier la différence de deux d'entre elles. 
+
+### Hypothèses {-}
+
+Soit $(k,l) \in \{1, .., p\}$ avec $k \ne l$. On considère le test statistique :  
+
+<div align="center">
+$H_0 : \mu_k = \mu_l$  
+contre  
+$H_0 : \mu_k \ne \mu_l$  
+</div> 
+
+
+### Test de Bonferroni {-}
+
++ Test statistique : On utilise le test de Bonferroni, lequel offre plus de précision que des t-Test 2 à 2 car il prend en compte toutes les données dans sa construction (avec la présence du $cm_R$).  
+Ce test repose sur la loi de Student $\mathcal{T}(\upsilon)$.
+
++ Calculs : Le test de Bonferroni se met en oeuvre en calculant :  
+
+  + $\bar x, i \in \{k,l\}$ : moyenne de $x_{i,1}, ..., x_{i,n_i}$,
+  
+  + $s_R = \sqrt{cm_R}$ (évaluable dans le tableau ANOVA),
+  
+  + le $t_{obs}$ défini par
+  
+  $$t_{obs} = \dfrac{\bar x_k - \bar x_l}{s_R \sqrt{\dfrac{1}{n_k} + \dfrac{1}{n_l}}} , $$
+  
+  + le réel $t_\alpha^{**}(\upsilon)$ vérifiant 
+  
+  $$\mathbb{P}(|T|\ge t_\alpha^{**}(\upsilon)) = \dfrac{2\alpha}{p(p-1)},$$
+
+  où $T \sim \mathcal{T}(\upsilon)$, $\upsilon = n-p$.  
+  Ce réel est dans la table ANNEXE 3 (Loi de Student).
+  
+  
++ Règles de décision : La règle de décision associée au test de Bonferroni est :  
+Si $t_{obs} \ge t_\alpha^{**}(\upsilon)$,  
+Alors on rejette $H_0$.  
+
++ p-valeurs : La p-valeur associée au test de Bonferroni est 
+
+$$p-valeur = \mathbb{P}(|T| \ge |t_{obs}|).$$ 
+
+
+### Autres tests de comparaison de moyennes {-}
+
+Il existe de nombreux autres tests post-hoc pour la comparaison de moyenne 2 à 2, entre autres : 
+
++ Le test de Tukey HSD (Honest Significant Differences), 
++ Le test de la petite différence significative (LSD) de Fisher, 
++ Le test Student de Newman-Keuls, 
++ Dunnett
++ ...
+<!-- --here faire une petite liste  -->
+
+Ce sera le role du statisticien de se documenter sur les particularités de ces tests et de choisir le plus pertinent selon l'études et les données. 
+
+\newpage 
+
+# Récap'
+
+```{r recap1, echo=FALSE, out.width = '100%', fig.align='center'}
+knitr::include_graphics("./Images_includ/recap_anova.png") 
+```
+
+```{r recap2, echo=FALSE, out.width = '100%', fig.align='center'}
+knitr::include_graphics("./Images_includ/recap_anova_complement.png") 
+```
+
+\newpage
+
+
+# Exercices 
+
+## Exercice 1 
+
+On souhaite comparer 4 fongicides, avec un témoin ne subissant aucun traitement, et entre eux, sur une culture de pomme de terre réalisée en 20 petites parcelles. On affecte aléatoirement les quatre types de fongicides sur
+16 parcelles, les 4 parcelles restantes sont soumises au témoin. Les mesures effectuées sont :  
+
+```{r ex1tab1, results="asis", echo = FALSE}
+knitr::include_graphics("./Images_includ/exo1_tab1.PNG")  
+```
+
+$\forall i \in \{1, .., 5\}$, le rendement en pomme de terre pour le fongicide $i$ est une variable $X_i \sim  \mathcal{N}(\mu_i, \sigma^2)$, avec $\mu_i$ et $\sigma$ inconnus. 
+Le tableau ANOVA, incomplet, est le suivant :  
+
+```{r ex1tab2, results="asis", echo = FALSE}
+knitr::include_graphics("./Images_includ/exo1_tab2.PNG") 
+```
+
+Peut-on affirmer, au risque 5%, que la nature du fongicide influe sur le rendement moyen de pommes de terre ?  
+
+\newpage 
+
+## Exercice 1 Solution
+
+Le facteur étudié est "type de traitement", avec pour modalités : _Fong 1_, _Fong 2_, _Fong 3_, _Fong 4_ et _Fong 5_. Donc $p = 5$.  
+Par l'énoncé, $\forall i \in \{1, .., p\}$, on observe la valeur de $X_i \sim  \mathcal{N}(\mu_i, \sigma^2)$, pour chacun des $n_i$ individus (parcelles de pomme de terre) d'un échantillon avec $n_i = 4$, et $\mu_i$ et $\sigma$ inconnus. Les individus étant tous différents, les échantillons sont indépendants.  
+On considère les hypothèses :  
+$H_0 : \mu_1 = \mu_2 = \mu_3 = \mu_4 = \mu_5$ contre  
+$H_1 :$ il existe au moins deux moyennes différentes.  
+
+On utilise le test ANOVA à un facteur. 
+Complétons maintenant le tableau ANOVA.  
+
+On a $n = \sum_{i=1}^{p} n_i = 20$,  
+
+$\bar x = \frac{29.6+33.7+33.6+29.3+35.2+33.3+31.5+36.1+28.0+35.7+36.8+39.3+30.6+34.6+37.1+31.2+27.8+22.7+20.9+18.5}{4 \times 5} = 31.275$,  
+
+$\bar x_1 = \frac{29.6+33.7+33.6+29.3}{4} = 31.55$,  
+
+$\bar x_2 = \frac{35.2+33.3+31.5+36.1}{4} = 34.025$,   
+
+$\bar x_3 = \frac{28.0+35.7+36.8+39.3}{4} = 34.95$,  
+ 
+$\bar x_4 = \frac{30.6+34.6+37.1+31.2}{4} = 33.375$,  
+
+$\bar x_5 = \frac{27.8+22.7+20.9+18.5}{4} = 22.475$,  
+
+$sce_T = sce_F + sce_R = 411.98 + 175.98 = 587.96$,  
+
+$ddl_T = n-1 = 20-1 = 19$, $ddl_F = p-1=5-1 = 4$, 
+$ddl_R = n-p = 20-5 = 15$,  
+
+$cm_F = \frac{sce_F}{ddl_F} = \frac{411.98}{4} = 102.995$,  
+
+$cm_R = \frac{sce_R}{ddl_R} = \frac{175.98}{15} = 11.732$  
+
+Et $f_{obs} = \frac{cm_F}{cm_R} = \frac{102.995}{11.732} = 8.7789$.  
+
+D'où le tableau  
+
+```{r ex1tab3, results="asis", echo = FALSE}
+knitr::include_graphics("./Images_includ/exo1_tab3.PNG") 
+```
+
+Remarquons que $\alpha = 0.05$ (5%).  
+Il faut ensuite déterminer le réel $f_\alpha (\upsilon_1,\upsilon_2)$ tel que $\mathbb{P}(F \ge f_\alpha(\upsilon_1, \upsilon_2)) = \alpha = 0.05$.  
+Où $F \sim \mathcal{F}(\upsilon_1, \upsilon_2), (\upsilon_1, \upsilon_2) = (p-1, n-p) = (4,15)$.  
+L'annexe 6 donne $f_\alpha (4,15) = 3.06$ et comme $f_{obs} = 8.79 > 3.06$, alors on rejette $H_0$.  
+Ainsi, au risque 5%, on peut affirmer que la nature du fongicide influe sur le rendement moyen de pomme de terre.  
+
+\newpage 
+
+## Exercice 2
+
+On dispose de 3 marques de saumons : _S1_, _S2_ et _S3_. Afin de comparer la qualité du saumon de ces 3 marques, deux groupes d'individus différents, _G1_ et _G2_, sont sollicités. Pour chaque marque, 4 individus de chaque groupe, tous différents, doivent gouter le saumon et lui attribuer une note entre 0 et 20. Les résultats sont :
+
+```{r ex2tab1, results="asis", echo = FALSE}
+knitr::include_graphics("./Images_includ/exo2_tab1.PNG") 
+```
+
+On suppose que, $\forall i \in \{1, 2, 3\}$, la note du saumon de la marque $S_i$ est une variable $X_i \sim  \mathcal{N}(\mu_i, \sigma^2)$, avec $\mu_i$ et $\sigma$ inconnus.  
+
+Les tableaux ANOVA, incomplets, correspondant à chacun des groupes, sont :  
+
+```{r ex2tab2, results="asis", echo = FALSE}
+knitr::include_graphics("./Images_includ/exo2_tab2.PNG") 
+```
+
+```{r ex2tab3, results="asis", echo = FALSE}
+knitr::include_graphics("./Images_includ/exo2_tab3.PNG") 
+```
+
+1. $\forall i \in \{1, 2, 3\}$, comparer les moyennes des notes obtenues entre _G1_ et _G2_ quant à $S_i$.  
+
+Que constatez-vous ?  
+Peut-on d'ores et déjà dire que le test ANOVA avec :  
+$H_0 : \mu_1 = \mu_2 = \mu_3$ contre  
+$H_1 :$ il existe au moins 2 moyennes différentes.  
+
+donnera la même conclusion pour _G1_ et _G2_ ? Justifier votre réponse. 
+
+2. Recopier et compléter les tableaux ANOVA.  
+
+3. Au final, peut-on affirmer, au risque 5%, que _S1_, _S2_ et _S3_ sont perçues de manière différente par les consommateurs ? 
+
+\newpage 
+
+## Exercice 2 Solution
+
+1. Les moyennes sont confectionnées dans les dernières lignes de chaque tableau : 
+
+```{r ex2tab4, results="asis", echo = FALSE}
+knitr::include_graphics("./Images_includ/exo2_tab4.PNG") 
+```
+
+Obtenues ainsi :  
+$G1 : \bar x_1 = \frac{15+14+13+14}{4}$,  
+$G1 : \bar x_2 = \frac{11+9+11+9}{4}$,  
+$G1 : \bar x_3 = \frac{16+16+14+14}{4}$,  
+$G2 : \bar x_1 = \frac{18+16+10+12}{4}$,  
+$G2 : \bar x_2 = \frac{15+5+14+6}{4}$,  
+$G2 : \bar x_3 = \frac{19+13+16+12}{4}$.  
+
+On remarque que, pour $i \in \{1,2,3\}$, la moyenne des valeurs correspondantes à $S_i$ de _G1_ est égale à celle de _G2_. Toutefois, on ne peut rien dire sur la réalisation du test ANOVA car il utilise des variances (carrés moyens), non pas des moyennes.  
+On peut donc avoir des conclusions différentes sans qu'il n'y ait de contradiction.
+
+2. Complétons maintenant les tableaux ANOVA :  
+
++ Tableau ANOVA _G1_ : 
+
+On a $n = \sum_{i=1}^{p} n_i = 12$,  
+
+$sce_F = sce_T - sce_R = 66 - 10 = 56$,  
+
+$ddl_T = n-1 = 12 - 1 = 11$, $ddl_F = p-1=3-1 = 2$, 
+$ddl_R = n-p = 12-3 = 9$,  
+
+$cm_F = \frac{sce_F}{ddl_F} = \frac{56}{2} = 28$,    
+
+$cm_R = \frac{sce_R}{ddl_R} = \frac{10}{9} = 1.1111$  
+
+Et $f_{obs} = \frac{cm_F}{cm_R} = \frac{28}{1.1111} = 25.2002$.  
+
+D'où le tableau  
+
+```{r ex2tab5, results="asis", echo = FALSE}
+knitr::include_graphics("./Images_includ/exo2_tab5.PNG") 
+```
+
++ Tableau ANOVA _G2_ : 
+
+On a $n = \sum_{i=1}^{p} n_i = 12$,  
+
+$sce_R = sce_T - sce_F = 208 - 56 = 152$,  
+
+$ddl_T = n-1 = 12 - 1 = 11$, $ddl_F = p-1=3-1 = 2$, 
+$ddl_R = n-p = 12-3 = 9$,  
+
+$cm_F = \frac{sce_F}{ddl_F} = \frac{56}{2} = 28$,  
+
+$cm_R = \frac{sce_R}{ddl_R} = \frac{152}{9} = 16.8888$  
+
+Et $f_{obs} = \frac{cm_F}{cm_R} = \frac{28}{16.8888} = 1.6579$.  
+
+D'où le tableau  
+
+```{r ex2tab6, results="asis", echo = FALSE}
+knitr::include_graphics("./Images_includ/exo2_tab6.PNG") 
+```
+
+3. On considère les hypothèses :  
+$H_0 : \mu_1 = \mu_2 = \mu_3$ contre  
+$H_1 :$ il existe au moins 2 moyennes différentes.  
+
+On utilise le test ANOVA à un facteur.  
+
+Remarquons que $\alpha = 0.05$ (5%).  
+Il faut ensuite déterminer le réel $f_\alpha (\upsilon_1,\upsilon_2)$ tel que $\mathbb{P}(F \ge f_\alpha(\upsilon_1, \upsilon_2)) = \alpha = 0.05$.  
+Où $F \sim \mathcal{F}(\upsilon_1, \upsilon_2), (\upsilon_1, \upsilon_2) = (p-1, n-p) = (3-1, 12-3) = (2,9)$.  
+L'annexe 6 donne $f_\alpha (2,9) = 4.26$.  
+Par le résultat de la question 2,  
+
++ Pour _G1_, on a $f_{obs} = 25.2002 > 4.26$, alors on rejette $H_0$.  
+Ainsi, au risque 5%, on peut affirmer que _S1_, _S2_ et _S3_ sont perçues de manière différente par les consommateurs.  
+
++ Pour _G2_, on a $f_{obs} = 1.6579 < 4.26$, alors on ne rejette pas $H_0$.  
+Ainsi, au risque 5%, on ne peut pas affirmer que _S1_, _S2_ et _S3_ sont perçues de manière différente par les consommateurs.  
+
+Au final, vu le résultat de G1, on peut affirmer, au risque 5%, que _S1_, _S2_ et _S3_ sont perçues de manières différente par les consommateurs. 
+
+\newpage 
+
+## Exercice 3
+
+Une enquête sur la consommation annuelle des ménages est réalisée par l'I.N.S.E.E. régulièrement. Ces ménages sont répartis en 5 grandes catégories suivant leur localisation :  
+
++ _C1_ : ménages en zone rurale,  
++ _C2_ : ménages résidant dans une unité urbaine inférieure à 20000 habitants,  
++ _C3_ : ménages résidant dans une unité urbaine comprise entre 20000 habitants et 100000 habitants,  
++ _C4_ : ménages résidant dans une unité urbaine supérieure à 100000 habitants autre que l'agglomération parisienne,  
++ _C5_ : ménages résidant dans l'agglomération parisienne.  
+
+Un groupement commercial s'intéresse particulièrement à la consommation annuelle des produits contenus dans la nomenclature 17 de I'I.N.S.E.E., c'est-à-dire, la consommation annuelle en mouton, agneau et chevreau et il souhaite savoir s'il y a un effet "localisation" sur la consommation annuelle
+moyenne des ménages pour ces produits. Le groupement commercial interroge un échantillon de 5 ménages par catégories. Les résultats, en euros, sont :
+
+```{r exo3-tab1, results="asis", echo = FALSE, fig.align='center'}
+knitr::include_graphics("./Images_includ/exo3_tab1.PNG") 
+```
+
+On suppose que, $\forall i \in \{1, ..., 5\}$, la consommation anuelle d'un ménage en euros de catégorie _Ci_ est une variable $X_i \sim  \mathcal{N}(\mu_i, \sigma^2)$, avec $\mu_i$ et $\sigma$ inconnus.  
+Le tableau ANOVA, incomplet, est reproduit ci-dessous : 
+
+```{r exo3-tab2, results="asis", echo = FALSE, fig.align='center'}
+knitr::include_graphics("./Images_includ/exo3_tab2.PNG") 
+```
+
+1. Faire le test ANOVA avec :  
+$H_0 : \mu_1 = \mu_2 = \mu_3 = \mu_4 = \mu_5$ contre  
+$H_1 :$ il existe au moins 2 moyennes différentes.  
+Au risque 5%. Interpréter le résultat. 
+
+2. Peut-on affirmer, au risque 5%, que $\mu_3 \ne \mu_4$ ? 
+
+\newpage 
+
+## Exercice 3 Solution
+
+1. Le facteur étudié est "catégorie" avec pour modalités : _C1_, _C2_, _C3_, _C4_, _C5_. Donc p = 5.  
+
+Par l'énoncé, $\forall i \in \{1, ..., p\}$, on observe la valeur de $X_i \sim  \mathcal{N}(\mu_i, \sigma^2)$ pour chacun des $n_i$ individus (ménages) d'un échantillon avec $n_i = 5$, et avec $\mu_i$ et $\sigma$ inconnus.  
+On considère les hypothèses :  
+$H_0 : \mu_1 = \mu_2 = \mu_3 = \mu_4 = \mu_5$ contre  
+$H_1 :$ il existe au moins 2 moyennes différentes.  
+
+On utilise le test ANOVA à un facteur. 
+On a $n = \sum_{i=1}^{p} n_i = 25$,  
+
+$sce_F = sce_T - sce_R = 908.64 - 556.40 = 352.24$,  
+
+$ddl_T = n-1 = 25-1 = 24$, $ddl_F = p-1= 5-1 = 4$, 
+$ddl_R = n-p = 25 - 5 = 20$,  
+
+$cm_F = \frac{sce_F}{ddl_F} = \frac{352.24}{4} = 88.06$,    
+
+$cm_R = \frac{sce_R}{ddl_R} = \frac{556.40}{20} = 27.82$  
+
+Et $f_{obs} = \frac{cm_F}{cm_R} = \frac{88.06}{27.82} = 3.1653$.  
+
+D'où le tableau  
+
+```{r exo3-tab2-corr, results="asis", echo = FALSE, fig.align='center'}
+knitr::include_graphics("./Images_includ/exo3_tab2_corr.PNG") 
+```
+
+Remarquons que $\alpha = 0.05$ (5%).  
+Il faut ensuite déterminer le réel $f_\alpha (\upsilon_1,\upsilon_2)$ tel que $\mathbb{P}(F \ge f_\alpha(\upsilon_1, \upsilon_2)) = \alpha = 0.05$.  
+Où $F \sim \mathcal{F}(\upsilon_1, \upsilon_2), (\upsilon_1, \upsilon_2) = (p-1, n-p) = (5-1,25-5) = c(4,20)$.  
+L'annexe 6 donne $f_\alpha (4,20) = 2.87$ et comme $f_{obs} = 3.1653 > 2.87$, alors on rejette $H_0$.  
+
+On peut affirmer, au risque 5%, que les consommations moyennes différent quant à la localisation des ménages. 
+
+2. On considère les hypothèses :  
+$H_0 : \mu_3 = \mu_4$ contre $H_1 : \mu_3 \ne \mu_4$.  
+
+On va utiliser le test de Bonferroni.  
+On pose $k=3$ et $l=4$. On a $\bar{x}_k = 55.6, \bar{x}_l=58.6, s_R=\sqrt{cm_R} = \sqrt{27.82} = 5.2744$ et  
+
+ $$t_{obs} = \dfrac{\bar x_k - \bar x_l}{s_R \sqrt{\dfrac{1}{n_k} + \dfrac{1}{n_l}}} =  \dfrac{55.6 - 58.6}{5.2744 \sqrt{\dfrac{1}{5} + \dfrac{1}{5}}} = -0.8993$$
+
+Remarquons que $\alpha = 0.05$ (5%).  
+Il faut ensuite déterminer le réel $t_\alpha^{**}$ tel que  
+
+$$\mathbb{P}(|T|\ge t_\alpha^{**}(\upsilon)) = \dfrac{2\alpha}{p(p-1)} = \dfrac{2 \times 0.05}{5(5-1)} = 0.005, $$
+
+où $T \sim \mathcal{T}(\upsilon), \upsilon = n-p = 25-5 = 20$.  
+
+L'annexe 3 donne l'encadrement : 
+
+$$t_\alpha^{**}(\upsilon) \in \mathopen{]}2.845,3.85\mathopen{[}, $$
+
+et comme
+$$t_{obs} = 0.8993 < 2.845 < t_\alpha^{**}(\upsilon),$$
+
+On ne rejette pas $H_0$.  
+Par conséquent, au risque 5%, les données ne nous permettent pas d'affirmer que $\mu_3 \ne \mu_4$. 
+
+\newpage
+
+## Exercice 4
+
+Une étude a été menée en vue de déterminer la teneur en oxygène dissout dans l'eau sur quatre sites différents : _Site 1_, _Site 2_, _Site 3_ et _Site 4_. Sur chaque site, 5 échantillons ont été sélectionnées aléatoirement. Les résultats sont :  
+
+```{r exo4-tab1, results="asis", echo = FALSE, fig.align='center'}
+knitr::include_graphics("./Images_includ/exo4_tab1.PNG") 
+```
+
+On suppose que, $\forall i \in \{1, .., 4\}$, la teneur en oxygène dissout dans l'eau du _Site i_ est une variable $X_i \sim  \mathcal{N}(\mu_i, \sigma_i^2)$, avec $\mu_i$ et $\sigma$ inconnus.  
+Le tableau ANOVA, incomplet, est reproduit ci-dessous :  
+
+```{r exo4-tab2, results="asis", echo = FALSE, fig.align='center'}
+knitr::include_graphics("./Images_includ/exo4_tab2.PNG") 
+```
+
+Peut-on affirmer, au risque 5%, qu'il y a au moins un des 4 sites qui diffère quant à la teneur moyenne en oxygène dissout dans l'eau ? 
+
+\newpage
+
+## Exercice 4 Solution
+
+Le facteur étudié est "site" avec pour modalités : _Site 1_, _Site 2_, _Site 3_ et _Site 4_. Donc $p=4$.  
+
+Par l'énoncé, $\forall i \in \{1, ...,p\}$, on observe la valeur de $X_i \sim  \mathcal{N}(\mu_i, \sigma_i^2)$ pour chacun des $n_i$ individus (échantillons d'eau) d'un échantillon avec $n_i = 5$, et $\mu_i$ et $\sigma$ inconnus. Les individus étant tous différents, les échantillons sont indépendants.  
+On considère les hypothèses :  
+$H_0 : \mu_1 = \mu_2 = \mu_3 = \mu_4$ contre  
+$H_1 :$ il existe au moins deux moyennes différentes.  
+
+On utilise le test ANOVA à un facteur.  
+
+On a $n = \sum_{i=1}^{p} n_i = 20$,  
+
+$sce_R = sce_T - sce_F = 1.1095 - 0.5195$,  
+
+$ddl_T = n-1 = 20 - 1 = 19$, $ddl_F = p-1=4-1 = 3$, 
+$ddl_R = n-p = 20-4 = 16$,  
+
+$cm_F = \frac{sce_F}{ddl_F} = \frac{0.59}{3} = 0.1966$, $cm_R = \frac{sce_R}{ddl_R} = \frac{0.5195}{16} = 0.0324$  
+
+Et $f_{obs} = \frac{cm_F}{cm_R} = \frac{0.1966}{0.0324} = 6.0679$.  
+
+D'où le tableau :  
+
+```{r exo4-tab2-corr, results="asis", echo = FALSE, fig.align='center'}
+knitr::include_graphics("./Images_includ/exo4_tab2_corr.PNG") 
+```
+
+Remarquons que $\alpha = 0.05$ (5%).  
+Il faut ensuite déterminer le réel $f_\alpha (\upsilon_1,\upsilon_2)$ tel que $\mathbb{P}(F \ge f_\alpha(\upsilon_1, \upsilon_2)) = \alpha = 0.05$.  
+Où $F \sim \mathcal{F}(\upsilon_1, \upsilon_2), (\upsilon_1, \upsilon_2) = (p-1, n-p) = (4-1, 20-4) = (3,16)$.  
+L'annexe 6 donne $f_\alpha (3, 16) = 3.29$ et comme  
+$$f_{obs} = 6.0679 > 3.29 = f_\alpha(\upsilon_1, \upsilon_2),$$  
+Alors on rejette $H_0$.  
+On peut affirmer, au risque 5%, qu'il y au moins un des 4 sites qui diffère quant à la teneur moyenne en oxygène dissout dans l'eau. 
+
+\newpage
+
+## Exercice 5
+
+On veut comparer trois milieux de culture _M1_, _M2_ et _M3_ quant au développement de bactéries. Pour le milieu _M1_, on examine 3 boîtes de Pétri, pour le milieu _M2_ 4 boîtes Pétri et pour le milieu _M3_ 2 boîtes de Pétri. Les résultats sont :  
+
+```{r exo5-tab1, results="asis", echo = FALSE, fig.align='center'}
+knitr::include_graphics("./Images_includ/exo5_tab1.PNG") 
+```
+
+On suppose que, $\forall i \in \{1, 2, 3\}$, le nombre de milliers de bactéries dans _Mi_ est une variable $X_i \sim  \mathcal{N}(\mu_i, \sigma_i^2)$ avec $\mu_i$ et $\sigma$ inconnus. 
+
+La tableau ANOVA, incomplet, est reproduit ci-dessous : 
+
+```{r exo5-tab2, results="asis", echo = FALSE, fig.align='center'}
+knitr::include_graphics("./Images_includ/exo5_tab2.PNG") 
+```
+
+Y a-t-il un effet "milieu" significatif sur le nombre moyen de bactérie ? 
+
+\newpage
+
+## Exercice 5 Solutions
+
+Le facteur étudié est "milieu de culture" avec pour modalités : _M1_, _M2_ et _M3_. Donc p = 3.  
+Par l'énoncé, $\forall i \in \{1, ..., p\}$, on observe la valeur de $X_i \sim  \mathcal{N}(\mu_i, \sigma_i^2)$ pour chacun des $n_i$ individus (boîtes de Pétri) d'un échantillon avec $n_1=3, n_2=4, n_3=2$ et $\mu_i$ et $\sigma$ inconnus. Les individus étant tous différents, les échantillons sont indépendants.  
+On considère les hypothèses :  
+$H_0 : \mu_1 = \mu_2 = \mu_3$ contre  
+$H_1 :$ il existe au moins deux moyennes différentes.  
+
+On utilise le test ANOVA à un facteur.  
+
+On a $n = \sum_{i=1}^{p} n_i = 9$,  
+
+$ddl_T = n-1 = 9- 1 = 8$, $ddl_F = p-1=3-1 = 2$, 
+$ddl_R = n-p = 9-3 = 6$,  
+
+$sce_F = cm_F \times ddl_F = 6 \times 2 = 12$,  
+
+$sce_R = sce_T - sce_F = 46-12= 34$, 
+
+$cm_R = \frac{sce_R}{ddl_R} = \frac{34}{6} = 5.6666$,    
+
+Et $f_{obs} = \frac{cm_F}{cm_R} = \frac{6}{5.6666} = 1.0588$.  
+
+```{r exo5-tab2-corr, results="asis", echo = FALSE, fig.align='center'}
+knitr::include_graphics("./Images_includ/exo5_tab2_corr.PNG") 
+```
+
+Remarquons que $\alpha = 0.05$ (5%).  
+Il faut ensuite déterminer le réel $f_\alpha (\upsilon_1,\upsilon_2)$ tel que $\mathbb{P}(F \ge f_\alpha(\upsilon_1, \upsilon_2)) = \alpha = 0.05$.  
+Où $F \sim \mathcal{F}(\upsilon_1, \upsilon_2), (\upsilon_1, \upsilon_2) = (p-1, n-p) = (3-1, 9-3) = (2,6)$.  
+L'annexe 6 donne $f_\alpha (2,6) = 5.14$ et comme  
+$$f_{obs} = 1.0588 < 5.14 = f_\alpha(\upsilon_1, \upsilon_2),$$  
+Alors on ne rejette pas $H_0$.  
+Par conséquent, en considérant un risque de 5%, les données ne permettent pas de conclure que le milieu influe sur le développement des colonies de bactéries. 
+
+\newpage
+
+# Annexes
+ 
+## Annexe 1 : Loi normale
+
+Soit $Z \sim \mathcal{N}(0,1)$. La table ci-dessous donne, pour un $\alpha$ choisi, la valeur $z_{\alpha}$ telle que  
+$\mathbb{P}(|Z| \ge z_{\alpha}) = \alpha$. 
+
+```{r table1, echo=FALSE, fig.align='center'}
+knitr::include_graphics("./Images_includ/table1.PNG") 
+```
+ 
+\newpage
+
+## Annexe 2 : Loi normale (bis)
+
+Soit $Z \sim \mathcal{N}(0,1)$. La table ci-dessous donne, pour un $z$ choisi, la valeur $\alpha$ telle que  
+$\mathbb{P}(|Z| \ge z) = \alpha$. 
+
+```{r table2-part1, echo=FALSE, fig.align='center', eval = FALSE}
+knitr::include_graphics("./Images_includ/table2_part1.PNG")
+```
+
+```{r table2-part2, echo=FALSE, fig.align='center', eval = FALSE}
+knitr::include_graphics("./Images_includ/table2_part2.PNG")
+```
+
+```{r table2, echo=FALSE, fig.align='center', eval = TRUE}
+knitr::include_graphics("./Images_includ/table2.PNG")
+```
+
+\newpage
+
+## Annexe 3 : Loi de Student
+
+Soit $T \sim \mathcal{T}(\upsilon)$ La table ci-dessous donne, pour un $\alpha$ et un $\upsilon$ choisis, la valeur $t_{\alpha}(\upsilon)$ telle que  
+$\mathbb{P}(|T| \ge t_{\alpha}(\upsilon)) = \alpha$.  
+Si $\upsilon \ge 31$, alors $t_{\alpha}(\upsilon) \approx z_{\alpha}$ défini dans la table 1 (Loi normale). 
+
+```{r table3, echo=FALSE, fig.align='center'}
+knitr::include_graphics("./Images_includ/table3.PNG")
+```
+ 
+\newpage
+
+## Annexe 4 : Loi du chi-deux
+
+Soit $K \sim \chi_\alpha^2(\upsilon)$. La table ci-dessous donne, pour un $\alpha$ et un $\upsilon$ choisis, la valeur $\chi_\alpha^2(\upsilon)$  
+telle que $\mathbb{P}(K \ge  \chi_\alpha^2(\upsilon)) = \alpha$. 
+
+```{r table4, echo=FALSE, fig.align='center'}
+knitr::include_graphics("./Images_includ/table4.PNG")
+```
+
+\newpage
+
+## Annexe 5 : Loi de Fisher I ($\alpha = 0.025$)
+
+Soit $F \sim \mathcal{F}(\upsilon_1, \upsilon_2))$. La table ci-dessous donne, pour un $\upsilon_1$ et un $\upsilon_2$ choisis, la valeur $f_\alpha(\upsilon_1, \upsilon_2)$ telle que  
+$\mathbb{P}(F \ge f_\alpha(\upsilon_1, \upsilon_2)) = \alpha = 0.025$
+
+```{r table5, echo=FALSE, fig.align='center'}
+knitr::include_graphics("./Images_includ/table5.PNG")
+```
+
+ 
+\newpage
+
+## Annexe 6 : Loi de Fisher II ($\alpha = 0.05$)
+
+Soit $F \sim \mathcal{F}(\upsilon_1, \upsilon_2))$. La table ci-dessous donne, pour un $\upsilon_1$ et un $\upsilon_2$ choisis, la valeur $f_\alpha(\upsilon_1, \upsilon_2)$ telle que  
+$\mathbb{P}(F \ge f_\alpha(\upsilon_1, \upsilon_2)) = \alpha = 0.05$
+
+```{r table6, echo=FALSE, fig.align='center'}
+knitr::include_graphics("./Images_includ/table6.PNG")
+```
+
+\newpage
+
+## Annexe 7 : Valeurs de Cochran
+ 
+Les valeurs intérieures du tableau ci-dessous donnent les coefficient $c(m,p)$ utilisé dans le test de Cochran. Le risque est fixé à 5%. Ici, $m$ est le nombre de données par échantillon et $p$ le nombre d'échantillons. 
+
+```{r table7, echo=FALSE, fig.align='center'}
+knitr::include_graphics("./Images_includ/table7.PNG")
+```
+
+\newpage
+
+# Sources
+ 
++ Le contenu de ce cours s'est basé sur l'enseignement et les supports écrits par [Christophe Chesneau](https://chesneau.users.lmno.cnrs.fr/). Ces supports ont été utilisé et modifié avec son accord, dans le but de dispenser ce cours. Merci à lui pour son aide.  
+
++ Les exercices proviennent des livres du même auteur, listés sur  [https://chesneau.users.lmno.cnrs.fr/](https://chesneau.users.lmno.cnrs.fr/).  
+
+Pour la pratique des ANOVA dans R : 
+
++ le livre [R Cookbook, 2nd Edition,  James (JD) Long, Paul Teetor, 2019-09-26](https://rc2e.com/linearregressionandanova)
+
+Des lectures complémentaires pourront vous intéresser : 
+
++ Fisher RA. [Statistical Methods for Research Workers](https://link.springer.com/chapter/10.1007/978-1-4612-4380-9_6). Edinburgh, United Kingdom: Oliver & Boyd; 1925.  
+
++ Sur [link.springer](https://link.springer.com/search?query=anova) ou de nombreux autres supports de cours sur internet... 
+
