@@ -1,0 +1,595 @@
+---
+title: "TP Analyse de la variance (ANOVA) à deux facteurs"
+author: "Mathilde Boissel"
+date: "09/11/2020"
+output: word_document
+toc: true 
+toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+## /!\ If problem with french word => "ReOpen with Encoding..." => "UTF-8"
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(ggplot2)
+library(dplyr)
+# library(tidyverse)
+options(stringsAsFactors = FALSE)
+```
+
+```{r logo-udl, results="asis", echo = FALSE}
+knitr::include_graphics("./Images_includ/logo_univ-lille-large.png") 
+```
+
+\newpage 
+
+# Théorie
+
+## Contexte  
+
+Quand utilise-t-on l'ANOVA à 2 facteurs (2 critères) ? 
+On se limitera au cas suivant :  
+
++ Deux facteurs étudiés _A_ et _B_.  
++ Le facteur _A_ possède _p_ modalités $A_1, A_2, ..., A_i, ..., A_p$.  
++ Le facteur _B_ possède _q_ modalités $B_1, B_2, ..., B_j, ..., B_q$.  
++ Le plan d'expérience est un plan factoriel complet, c.a.d que l'on expérimente toutes les combinaisons de modalités ($A_i, B_j$).  
++ On fait _n_ répétitions par traitement, n peut être égal à 1 ce qui signifie qu'il n'y a pas de répétition. Le nombre d'unités expérimentales est donc $N = npq$.  
++ L'expérimentation est un dispositif en randomisation totale.  
+
+Dans le cas où $n>1$, on dispose des données suivantes :  
+
+```{r tab1, echo = FALSE}
+knitr::include_graphics("./Images_includ/anova2_tab1.PNG") 
+```
+
+```{r tab2, echo = FALSE}
+knitr::include_graphics("./Images_includ/anova2_tab2.PNG") 
+```
+
+## Modèle statistique
+
++ $y_{ijk}$ pour le couple de modalité (i,j) suit une distribution $\mathcal{N}(\mu_{ij}, \sigma_{ij}^2)$.  
+
+  + $\mu_{ij}$ moyenne inconnue pour la _i-ième_ modalité du facteur _A_ et pour la _j-ième_ modalité du facteur _B_.  
+  + $\sigma_{ij}^2$ variance inconnue pour la _i-ième_ modalité du facteur _A_ et pour la _j-ième_ modalité du facteur _B_.  
+  + Dans toute la suite, on supposera : $\forall i,j$ $\sigma_{ij}^2 = \sigma^2$ où $\sigma^2$ est la variance commune inconnue.  
+
++ Le modèle statistique peut alors s'écrire comme suit.  
+
+$$y_{ijk} = \mu_{ij} + \varepsilon_{ijk}$$
+
+  + $\varepsilon_{ijk}$ est l'erreur aléatoire (ou résidu) qui contient aussi les erreurs de mesures, les variations aléatoires dues à l'individus tiré.  
+  + $\varepsilon_{ijk} \sim \mathcal{N}(0, \sigma^2)$  
+
+
+## Les effets
+
+Avec ce modèle on étudie deux types d'effets.  
+
++ Les **effets principaux**.  
+
+  + **effet additif principal** dû à la modalité _i_ du facteur _A_ : $a_i = \mu_{i.} - \mu_{..}$  
+  + **effet additif principal** dû à la modalité _j_ du facteur _B_ : $b_j = \mu_{.j} - \mu_{..}$  
+Avec  
+
+La moyenne de tous les résultats possibles sous l'effet de la modalité _i_ du facteur _A_ : $\mu_{i.} = \frac{1}{q} \sum_{j=1}^{q} \mu_{ij}$  
+La moyenne de tous les résultats possibles sous l'effet de la modalité _j_ du facteur _B_ : $\mu_{.j} = \frac{1}{p} \sum_{i=1}^{p} \mu_{ij}$  
+La moyenne de tous les résultats possibles $\mu_{..} = \frac{1}{pq} \sum_{j=1}^{q} \sum_{i=1}^{p} \mu_{ij}$  
+
++ L'**interaction**.  
+
+L'**interaction** due à l'effet conjugué de la modalité _i_ du facteur _A_ et de la modalité _j_ du facteur _B_ :  
+  $(ab)_{ij} = (\mu_{ij} - \mu_{.j}) - (\mu_{i.} - \mu_{..}) = (\mu_{ij} - \mu_{i.}) - (\mu_{.j} - \mu_{..})$  
+  
+Avec  
+  
+L'effet additif dû à la modalité _i_ du facteur _A_ quand le facteur _B_ a la modalité _j_ : $\mu_{ij} - \mu_{.j}$  
+  
+L'effet additif dû à la modalité _j_ du facteur _B_ quand le facteur _A_ a la modalité _i_ : $\mu_{ij} - \mu_{i.}$  
+  
+
+Le **modèle** peut donc aussi s'écrire comme suit :  
+
+$$y_{ijk} = \mu_{..} + a_i + b_j + (ab)_{ij} + \varepsilon_{ijk}$$
+
+toujours avec  
+
+$\varepsilon_{ijk} \sim \sim \mathcal{N}(0, \sigma^2)$ ; $\sum_{i=1}^{p} a_i = 0$ ; $\sum_{j=1}^{q} b_j = 0$ ; $\sum_{i=1}^{p} (ab)_{ij} = 0$ ; $\sum_{j=1}^{q} (ab)_{ij} = 0$ ;
+
+Dans R cette formule est écrite ainsi : `y ~ A*B` ou encore `y ~ A + B + A:B` 
+
+Interprétation de la formule : le résultat observé est une moyenne générale + un effet principal dû à _A_ + un effet principal dû à _B_ + un effet supplémentaire _i.e._ interaction due à l'effet conjugué des facteurs _A_ et _B_ + un terme aléatoire non explicable par les facteurs _A_ et _B_. 
+
++ Propositions importantes :  
+
+  + Si $\forall i$ $a_i = 0$ alors **il n'y a pas d'effet principal du facteur _A_** sur la moyenne des valeurs de la variable.  
+  + Si $\forall j$ $b_j = 0$ alors **il n'y a pas d'effet principal du facteur _B_** sur la moyenne des valeurs de la variable.  
+  + Si $\forall i,j$ $(ab)_{ij} = 0$ alors $(\mu_{ij} - \mu_{.j}) - (\mu_{i.} - \mu_{..}) = 0$ => $\mu_{ij} - \mu_{.j} = \mu_{i.} - \mu_{..}$ : effet additif dû à la modalité _i_ du facteur _A_ quand le facteur _B_ a la modalité _j_ est égal à l'effet additif principal dû à la modalité _i_ du facteur _A_ c.a.d. que l'effet du facteur _A_ ne dépend pas des modalités de _B_.  
+  + Si $\forall i,j$ $(ab)_{ij} = 0$ alors $(\mu_{ij} - \mu_{i.}) - (\mu_{.j} - \mu_{..}) = 0$ => $\mu_{ij} - \mu_{i.} = \mu_{.j} - \mu_{..}$ : effet additif dû à la modalité _j_ du facteur _B_ quand le facteur _A_ a la modalité _i_ est égal à l'effet additif principal dû à la modalité _j_ du facteur _B_ c.a.d. que l'effet du facteur _B_ ne dépend pas des modalités de _A_.    
+  + Dans les deux cas, on dit qu'il n'y a pas d'interaction.  
+
+## Les tests à effectuer  
+  
++ **Absence d'interaction** contre présence d'interaction c.a.d  
+$H_0 (\forall i,j$ $(ab)_{ij} = 0)$ contre $H_1 ($ il existe un $(ab)_{ij} \ne 0)$  
+
++ **Absence d'effet principal du facteur _A_** contre la présence d'effet principal du facteur _A_ c.a.d. $H_0 (\forall i$ $a_i = 0)$ contre $H_1 ($ il existe un $a_i \ne 0)$  
+
++ **Absence d'effet principal du facteur _B_** contre la présence d'effet principal du facteur _B_ c.a.d. $H_0 (\forall j$ $b_j = 0)$ contre $H_1 ($ il existe un $b_j \ne 0)$  
+
+Le rejet des tests arrivera dans les situations suivantes :  
+
++ Rejet de l'**Absence d'interaction** si :  
+
+  + la variabilité due à l'interaction est "trop" supérieure à la variabilité résiduelle ;  
+  + le rapport entre la variabilité due à l'interaction et la variabilité résiduelle est "trop" supérieur à 1 ;  
+  + pour tenir compte du nombre de modalités des facteurs et du nombre total d'expérience, on pondère avec des degrés de libertés.  
+  
++ Rejet de l'**Absence d'effet principal du facteur** si :  
+
+  + la variabilité due à l'effet principal du facteur est "trop" supérieure à la variabilité résiduelle ;  
+  + le rapport entre la variabilité due à l'effet principal du facteur et la variabilité résiduelle est "trop" supérieur à 1 ;  
+  + pour tenir compte du nombre de modalités des facteurs et du nombre total d'expérience, on pondère avec des degrés de libertés.  
+
+## Les calculs 
+
++ moyenne observée pour le couple de modalités _(i,j)_ : $\bar{y}_{ij.} = \frac{1}{n} \sum_{k=1}^{n} y_{ijk}$  
+
++ moyenne générale observée pour la modalité _i_ du facteur _A_ : $\bar{y}_{i..} = \frac{1}{q} \sum_{j=1}^{q} y_{ij.}$  
+
++ moyenne générale observée pour la modalité _j_ du facteur _B_ : $\bar{y}_{.j.} = \frac{1}{p} \sum_{i=1}^{p} y_{ij.}$  
+
++ moyenne générale observée : $\bar{y}_{...} = \frac{1}{p} \sum_{i=1}^{p} \bar{y}_{i..} = \frac{1}{q} \sum_{j=1}^{q} \bar{y}_{.j.}$  
+
++ effet principal estimé pour la modalité _i_ du facteur _A_ : $\hat{a}_i = \bar{y}_{i..} - \bar{y}_{...}$  
+
++ effet principal estimé pour la modalité _j_ du facteur _B_ : $\hat{b}_j = \bar{y}_{.j.} - \bar{y}_{...}$  
+
++ interaction estimée due au couple _(i,j)_ : 
+$$\widehat{(ab)_{ij}} = (\bar{y}_{ij.} - \bar{y}_{.j.}) - (\bar{y}_{i..} - \bar{y}_{...}) = \bar{y}_{ij.} - (\bar{y}_{...} + \hat{a}_i + \hat{b}_j)$$
+
++ résidu estimé pour l'observation _(i,j,k)_ : $\widehat{\varepsilon_{ijk}} = y_{ijk} - \bar{y}_{ij.}$  
+
++ la somme des carrés des écarts totale : 
+$$SCE_T = \sum_{i=1}^{p}\sum_{j=1}^{q}\sum_{k=1}^{n} (y_{ijk} - \bar{y}_{...})^2$$
+
++ la somme des carrés des écarts du facteur _A_ : 
+$$SCE_A = nq\sum_{i=1}^{p}\hat{a_i}^2$$
+
++ la somme des carrés des écarts du facteur _B_ : 
+$$SCE_B = np\sum_{j=1}^{q}\hat{b_j}^2$$
+
++ la somme des carrés des écarts de l'interaction : 
+$$SCE_{AB} = n\sum_{i=1}^{p}\sum_{j=1}^{q}\widehat{(ab)_{ij}}^2$$
+
++ la somme des carrés des écarts :  
+
+  + sommes des carrés due au couple _(i,j)_ : $SCE_{ij} = \sum_{k=1}^{n} \widehat{\varepsilon_{ijk}}^2$  
+  
+  + somme des carrés des écarts résiduelle : $SCE_R = \sum_{i=1}^{p} \sum_{j=1}^{q} SCE_{ij}$
+
++ équation d'analyse de la variance :  
+
+  + $SCE_T = SCE_A + SCE_B + SCE_{AB} + SCE_R$  
+  
+  + la variabilité totale est décomposée en une variabilité due au facteur A, une variabilité due au facteur B, une variabilité due à l'interaction AB, et une variabilité dite résiduelle.  
+  
++ les degrés de liberté :  
+  + $d.d.l._T = npq - 1$  
+  + $d.d.l._A = p - 1$  
+  + $d.d.l._B = q - 1$  
+  + $d.d.l._{AB} = (p-1)(q-1)$  
+  + $d.d.l._R = (n-1)pq$  
+  + On a : $d.d.l._T = d.d.l._A + d.d.l._B + d.d.l._{AB} + d.d.l._R$  
+  
++ les carrés moyens CM :  
+  + $CM_A = \frac{SCE_A}{d.d.l._A}$  
+  + $CM_B = \frac{SCE_B}{d.d.l._B}$  
+  + $CM_{AB} = \frac{SCE_{AB}}{d.d.l._{AB}}$  
+  + $CM_R = \frac{SCE_R}{d.d.l._R}$  
+  
++ les $F_{obs}$ ou Test F :  
+  + $F_A = \frac{CM_A}{CM_R}$  
+  + $F_B = \frac{CM_B}{CM_R}$  
+  + $F_{AB} = \frac{CM_{AB}}{CM_R}$  
+  
++ les p-valeurs $Pr\{F \ge F_{obs} \}$  
+  + $p_A = Pr\{F \ge F_A\}$ où $F \sim \mathcal{F}(p-1, (n-1)pq)$  
+  + $p_B = Pr\{F \ge F_B\}$ où $F \sim \mathcal{F}(q-1, (n-1)pq)$  
+  + $p_{AB} = Pr\{F \ge F_{AB}\}$ où $F \sim \mathcal{F}((p-1)(q-1),(n-1)pq)$  
+  
+Ce qui nous permet de compléter le **tableau ANOVA-II** :  
+
+```{r tab3, echo = FALSE}
+knitr::include_graphics("./Images_includ/anova2_tab3.PNG") 
+```
+
+## Réalisation du test et conclusion
+
++ Tester l'intéraction :  
+  + $H_0(\forall i,j$ $(ab)_{ij} = 0)$ contre $H_1$ ("il existe un $(ab)_{ij} \ne 0$")
+  + $F_{th} = F_{1-\alpha}(d.d.l._{AB}, d.d.l._R) = F_{1-\alpha}((p-1)(q-1),(n-1)pq)$ 
+  + Si $F_{AB} \le F_{th}$ ou si $p_{AB} \ge \alpha$
+    + non rejet de $H_0$ ;
+    + les données ne permettent pas de conclure à la présence d'une **intéraction**.  
+
++ Tester l'effet principal du facteur A 
+  + $H_0(\forall i$ $a_i = 0)$ contre $H_1$ ("il existe un $a_i \ne 0$")
+  + $F_{th} = F_{1-\alpha}(d.d.l._{A}, d.d.l._R) = F_{1-\alpha}(p-1,(n-1)pq)$ 
+  + Si $F_{A} > F_{th}$ ou si $p_{A} < \alpha$
+    + rejet de $H_0$ ;
+    + il y a un effet **principal** du facteur A.
+  + Si $F_A \le F_{th}$ ou si $p_A \ge \alpha$
+    + non rejet de $H_0$ ;
+    + les données ne permettent pas de conclure à un effet **principal** du facteur A.  
+    
++ Tester l'effet principal du facteur B 
+  + $H_0(\forall j$ $b_j = 0)$ contre $H_1$ ("il existe un $b_j \ne 0$")
+  + $F_{th} = F_{1-\alpha}(d.d.l._{B}, d.d.l._R) = F_{1-\alpha}(q-1,(n-1)pq)$ 
+  + Si $F_{B} > F_{th}$ ou si $p_{B} < \alpha$
+    + rejet de $H_0$ ;
+    + il y a un effet **principal** du facteur B
+  + Si $F_B \le F_{th}$ ou si $p_B \ge \alpha$
+    + non rejet de $H_0$ ;
+    + les données ne permettent pas de conclure à un effet **principal** du facteur B.  
+
+<!-- # Exercice  -->
+
+<!-- + But et conditions de l'analyse : -->
+
+<!-- Trois laboratoires ont dans leur cahier des charges de mesurer la teneur en phosphore dans quatre produits courants dont on sait que leur moyenne en phosphore est différente. On souhaite savoir s'il y a un effet laboratoire et si oui, savoir si cet effet est le même quelque soit le type de produit analyser. Le risque $\alpha$ est égal à $0.05$.  -->
+
+<!-- les pages 45 à 52 -->
+
+\newpage
+
+# Travaux pratiques : Étude disparité entre des fromages 
+
+Un producteur de producteur de fromages s'intéresse à la teneur en pH au coeur du fromage. Ces fromages sont fabriqués à partir de 3 lignes de production $L_1, L_2, L_3$ et à partir du lait provenant de 5 sortes de citernes $C_1, C_2, C_3, C_4, C_5$, chaque citerne pouvant alimenter n'importe laquelle des lignes de productions. 
+Il s'aperçoit d'une disparité de pH entre les fromages et il ne sait pas s'il doit mettre cette disparité sur le compte d’un effet "type de ligne de production" ou sur compte d’un effet "type de citerne" ou au compte des deux effets ?
+
+On va réaliser une analyse de variance **à deux facteurs** pour tenter de répondre à la question.  
+
+## Lire les données
+
+Pour chaque couple $(L_i, C_j)$, on préléve 2 fromages et en mesure le pH. 
+
+```{r data-fromage, echo = FALSE}
+## include anove2_tp_tab1
+knitr::include_graphics("./Images_includ/anova2_tp_tab1.PNG") 
+```
+
++ Construire le `data.frame` pour l'analyse de variance (avec les bons formats). 
+
+```{r data-from}
+fromages <- data.frame(
+  "pH" = c(5.5,6.2,5.4,5.6,6.2,5.3,6.2,5.2,5.4,6,5.5,6.4,5.4,5.4,6,5.3,6.2,5.4,5.4,6,5.6,6,5.3,5.6,6.3,5.2,6.2,5.1,5.5,6.1),
+  "lignes" = as.factor(rep(c("L1","L2","L3"),c(10,10,10))),
+  "citernes" = factor(x = rep(paste0("C", 1:5),6), levels = paste0("C", 1:5))
+)
+```
+
+## Visualiser et résumer les données
+
++ Visualiser les données.
+
+```{r viz1-from, fig.height = 10}
+## base / stats
+par(mfrow = c(2, 1))
+plot(pH ~ citernes*lignes, data = fromages)
+```
+
+`plot(pH ~ citernes*lignes)` construit :  
+
++ pour chaque niveau du facteur de variation citernes, les boxplot des observations correspondant à ce niveau du facteur ; si les boxplots sont décalés, on peut soupçonner un effet principal du facteur ; ici les boxplot sont décalés, on soupçonne un effet du facteur citernes ;  
+
++ pour chaque niveau du facteur de variation lignes, les boxplot des observations correspondant à ce niveau du facteur ; ici les boxplot ne sont pas trop décalés, on soupçonne l’absence d’effet principal du facteur lignes.
+
+On peut aussi afficher directement les deux facteurs sur un même graphique comme suit :  
+
+```{r viz2-from, fig.width = 10, fig.height = 10}
+## base / stats
+par(mfrow = c(1, 1))
+boxplot(
+  formula = pH ~ lignes*citernes, 
+  data = fromages, 
+  cex.axis = 0.5, # label size
+  las = 2, # rotate label to read them properly
+  main = "Boite à moustaches"
+)
+```
+
+```{r viz3-from}
+## avec ggplot2
+ggplot(
+  data = fromages, 
+  mapping = aes(x = citernes, y = pH, color = lignes)
+) + 
+  geom_boxplot() +
+  scale_color_viridis_d(end = 0.8) + 
+  theme_bw() + 
+  labs(title = "Boxplot")
+```
+
++ Résumer les données pour chaque groupe :  
+
+```{r groupbysummary-from}
+## base / stat
+n_group <- aggregate(formula = pH ~ citernes*lignes, data = fromages, FUN = length)
+names(n_group)[3] <- "n"
+mean_group <- aggregate(formula = pH ~ citernes*lignes, data = fromages, FUN = mean)
+names(mean_group)[3] <- "mean"
+sd_group <- aggregate(formula = pH ~ citernes*lignes, data = fromages, FUN = sd)
+names(sd_group)[3] <- "sd"
+na_group <- aggregate(formula = pH ~ citernes*lignes, data = fromages, FUN = function(x) sum(is.na(x)))
+names(na_group)[3] <- "n_NA"
+
+datalist <- list(n_group, mean_group, sd_group, na_group)
+my_tab_summar <- Reduce(
+  f = function(x,y) {
+    merge(x, y, by = c("citernes", "lignes"))
+  }, 
+  x = datalist
+)
+
+## ou avec dplyr 
+fromages %>% 
+  dplyr::group_by(lignes, citernes) %>% 
+  dplyr::summarise(
+    n = n(), 
+    mean = mean(pH), # /!\ mean(, na.rm = TRUE)
+    sd = sd(pH), # /!\ sd(, na.rm = TRUE)
+    NA_rendement = sum(is.na(pH))
+  ) %>% 
+  dplyr::ungroup() 
+``` 
+
+\newpage
+
+## Test ANOVA 
+
+La valeur $pH_{ijk}$ est la valeur du pH du k-ième échantillon quand il est soumis à la i-ième modalité du facteur "lignes" et la j-ième modalité du facteur "citernes".  
+
+- $\mu$ est la moyenne générale inconnue  
+- $a_i$ est l'effet principal de la i-ième modalité du facteur citernes  
+- $b_j$ est l'effet principal de la j-ième modalité du facteur lignes  
+- $(ab)_{ij}$ est l'effet de l'interaction entre la j-ième modalité du facteur citernes et la j-ième modalité du facteur lignes.  
+
+On a alors modèle  
+
+$pH_{ijk} = \mu + a_i + b_j + (ab)_{ij} + \varepsilon_{ijk}$ avec $\varepsilon_{ijk} \sim \mathcal{N}(0, \sigma^2)$
+
+Dans R la formule est : `pH ~ citernes + lignes + citernes:lignes` _i.e._  `pH ~ citernes * lignes`.  
+Si on ne s'intéresse pas à l'interaction, on peut simplement écrire : `pH ~ citernes + lignes`.  
+
+
+### Recherche de l’interaction
+
+Pour l’utiliser, il faut qu’il y ait au moins 2 facteurs de variation A et B dont on veut étudier l’interaction sur la moyenne d’une variable à expliquer y (ici A = "citernes", "B" = "lignes" et y = "pH").  
+
+Si le facteur A possède p modalités et le facteur B possède q modalités, le résultat est une suite de q lignes brisées. À chaque modalité j du facteur B est associé une ligne brisée qui relie, les points $(i, y_{ij.})$. Si les lignes brisées sont "presque" parallèles, on peut soupçonner une absence d’interaction. Il faudra le tester. 
+
+```{r interaction-plotA}
+interaction.plot(
+  x.factor = fromages$citernes, 
+  trace.factor = fromages$lignes,
+  response = fromages$pH, 
+  trace.label = "lignes", xlab = "citernes", ylab = "pH", 
+  lty = 1:3, 
+  legend = FALSE
+)
+legend("bottomright", legend = c("L1", "L2", "L3"), lty = 1:3, cex = 0.6)
+```
+
+```{r interaction-plotB}
+interaction.plot(
+  x.factor = fromages$lignes, 
+  trace.factor = fromages$citernes,
+  response = fromages$pH, 
+  trace.label = "citernes", xlab = "lignes", ylab = "pH", 
+  lty = 1:5, 
+  legend = FALSE
+)
+legend("right", legend = levels(fromages$citernes), lty = 1:3, cex = 0.6)
+```
+
+Le "presque" parallélisme des courbes nous laisse soupçonner l’absence d’interaction, mais cela reste à tester.  
+
+
+### Réalisation de l’analyse de la variance deux facteurs  
+
+```{r anova-pommmes}
+fromage.aov <- aov(formula = pH ~ citernes*lignes, data = fromages) 
+fromage.aov
+```
+
+Pour faire le lien avec le tableau ANOVA-II, l'objet "fromage.aov" affiche un résultat de la forme : 
+
+```{r tab-anova2, echo=FALSE, results='asis'}
+kable(
+  tibble(
+  "  " = c("SCE", "d.d.l."),
+  "Facteur A" = c("$SCE_A$", "$ddl_A$"),
+  "Facteur B" = c("$SCE_B$", "$ddl_B$"),
+  "Interaction A:B" = c("$SCE_{AB}$", "$ddl_{AB}$"),
+  "Residuelle" = c("$SCE_R$", "$ddl_R$")
+  )
+)
+```
+
+Et l'estimation de l'écart-type résiduel : $\hat \sigma = \sqrt{CM_R}$.  
+
+Pour aller plus loin dans le tableau d’analyse de la variance, il suffit d'afficher le résumé statistique comme suit : 
+
+```{r summaryaov-from}
+summary(fromage.aov)
+```
+
+Ici les informations sont sous la forme suivante : 
+
+```{r tabsummary-anova, echo=FALSE, results='asis'}
+kable(
+  tibble(
+  "  " = c("Facteur A", "Facteur B", "Interaction AB", "Résiduelle"),
+  "d.d.l" = c("$ddl_A$", "$ddl_B$", "$ddl_{AB}$", "$ddl_R$"),
+  "SCE" = c("$SCE_A$", "$SCE_B$", "$SCE_{AB}$", "$SCE_R$"), 
+  "CM" = c("$CM_A$", "$CM_B$","$CM_{AB}$","$CM_R$"), 
+  "Statistique F" = c("$F_{obs}A$", "$F_{obs}B$","$F_{obs}AB$",""), 
+  "p.value" = c("$P(F_A > F_{obs}A)$", "$P(F_B > F_{obs}B)$","$P(F_{AB} > F_{obs}AB)$","")
+  )
+)
+```
+
+avec bien sûr $F_A \sim \mathcal{F}(ddl_A, ddl_R)$, $F_B \sim \mathcal{F}(ddl_B, ddl_R)$, $F_{AB} \sim \mathcal{F}(ddl_{AB}, ddl_R)$  
+
+Lorsqu'on s'est fixé un risque $\alpha$ a priori,  
+
+- on rejette $H_0$ : "Absence d'interaction" si la $p-valeur_{AB} < \alpha$ ;  
+- on rejette $H_0$ : "Absence d'effet principal du facteur A" si la $p-valeur_{A} < \alpha$ ;  
+- on rejette $H_0$ : "Absence d'effet principal du facteur B" si la $p-valeur_{B} < \alpha$ ;  
+
+
+**Attention** : Il faut d’abord examiner l’interaction.  
+
++ Si on ne rejette pas l’hypothèse H0 : "absence d’interaction", on regarde ensuite chacun des facteurs. L’effet (ou non) d’un facteur sera le même quelque soit la modalité prise par l’autre facteur.  
++ Si on rejette H0 : "absence d’interaction", il faut faire très attention sur la conclusion. L’absence d’effet principal d’un facteur ne signifie pas du tout absence d’effet de ce facteur, car cet effet ne peut apparaître que lorsqu’une ou plusieurs modalités de l’autre facteur sont présentes.  
+
+Ici, nos conclusions sont les suivantes :  
+
++ Pour citernes, $p-value = 4.75e-09 < 0.05$, donc on rejette $H_0 : \forall i$ $a_i = 0$ c.a.d. $H_0 :$ "Absence d'effet principal citernes". On dira qu'il y a un effet principal citernes.  
++ Pour lignes, $p-value = 0.981 > 0.05$, donc on ne rejette $H_0 : \forall j$ $b_j = 0$ c.a.d. $H_0 :$ "Absence d'effet principal lignes". On dira, **par abus de langage***, qu'il n'y pas d'effet principal lignes.  
++ Pour ligne:citerne, $p-value = 0.469 > 0.05$, on ne rejette pas $H_0 : \forall i \forall j$ $(ab)_{ij} = 0$ c.a.d. $H_0 :$ "Absence d'interaction". On dira, **par abus de langage**, qu'il n'y pas d'interaction.  
++ Puisqu’il y a un effet principal citernes, il y a un effet citernes. Puisqu’il n’y a pas d’interaction, cet effet est le même quelque soit le type de lignes.  
++ Puisqu’il n’y a pas d’effet principal lignes et qu’il n’y a pas d’interaction, il n’y a pas d’effet lignes et cet absence d’effet est la même quelque soit la citerne.  
+
+Attention ici cet abus de langage peut de faire car notre test est bilatérale et que ses deux conclusions sont diamétralement opposées.   
+
+
+## Estimations
+
+### Estimation des paramètres du modele
+
+Quand on écrit le modèle ainsi $y_{ijk} = \mu_{ij} + \varepsilon_{ijk}$ ;
+
+Les paramètres inconnus sont les $\mu_{ij}$, mais on peut s’interesser aussi $\mu_{i.}$, $\mu_{.j}$ ou encore $\mu_{..}$ la moyenne générale. 
+
+Pour obtenir ces informations et faire des comparaisons de moyennes, on peut utiliser l’instruction `model.tables` avec l'option `type = means`.  
+
+```{r estim-model}
+esti.fromage <- model.tables(
+  x = fromage.aov, 
+  type = "means", 
+  se = TRUE
+) 
+esti.fromage
+```
+
++ `esti.fromage` est une liste à plusieurs composantes  
++ `esti.fromage$tables` est aussi une liste avec
+  + la composante `esti.fromage$tables$"Grand mean"` dont la valeur est $\hat{\mu}_{..}$
+  + la composante `esti.fromage$tables$"citernes"` dont la valeur est le vecteur $(\hat{\mu}_{1.}, \hat{\mu}_{2.}, ..., \hat{\mu}_{p.})$ 
+  + la composante `esti.fromage$tables$"lignes"` dont la valeur est le vecteur $(\hat{\mu}_{.1}, \hat{\mu}_{.2}, ..., \hat{\mu}_{.q})$ 
+  + la composante `esti.fromage$tables$"citernes:lignes"` dont la valeur est la matrice des $\hat{\mu}_{ij}$
++ `esti.fromage$"n"` est une liste donnant pour chaque paramètre le nombre d’observations qu’on a du sommer pour obtenir l’estimation
++ `esti.fromage$se` est une liste donnant pour chaque facteur l’écart-type estimé de la différence des moyennes entre deux modalités du même facteur et pour l’interaction, l’écart-type estimé de la différence des moyennes entre $(i,j)$ et $(i',j')$
+
+
+### Estimation des effets
+
+Quand on écrit le modèle ainsi $y_{ijk} = \mu + a_i + b_j + (ab)_{ij} + \varepsilon_{ijk}$ où $\sum_{i=1}^{p} a_i = 0$, $\sum_{j=1}^{q} b_j = 0$, $\forall i \sum_{j=1}^{q} (ab)_{ij} = 0$, $\forall j \sum_{i=1}^{p} (ab)_{ij} = 0$ ; 
+
+on peut s’interesser aux effets $a_i$, $b_j$ et $(ab)_{ij}$. 
+
+Pour obtenir ces informations, on peut utiliser l’instruction `model.tables` avec l'option `type = effects`.
+
+```{r estim-effet}
+estieffets.fromage <- model.tables(
+  x = fromage.aov, 
+  type = "effects", 
+  se = TRUE
+)
+estieffets.fromage
+```
+
+Cette instruction donne les estimations : 
+$\hat{a_1}, \hat{a_2}, ..., \hat{a_p}, \hat{b_1}, \hat{b_2}, ..., \hat{b_q}, \widehat{(ab)}_{ij}$ 
+et les écart-types de ces estimations.  
+
+On sait que sous l'hypothèse $H_0 (a_i=0)$ alors $\dfrac{\hat{a}_i}{e.t.(\hat{a}_i)} \sim T(d.d.l._R)$  
+
+Ces renseignements permettent donc de tester séparément chaque $a_i$ (idem pour $b_j$ et pour les $(ab)_{ij}$), 
+mais **attention** on peut très bien ne pas rejeter chacun des $p$ test $H_0:a_i=0$ et rejetter $H_0:a_i=0 \forall i$ !!!
+
+## Diagnostic
+
+### Diagnostiquer la normalité des résidus
+
+```{r normresid, eval = FALSE}
+hist(resid(fromage.aov)) # ou
+qqnorm(resid(fromage.aov))
+qqline(resid(fromage.aov)) 
+# ou encore plus rapidement
+plot(fromage.aov)
+```
+
+Les tests sont assez peu sensibles à la non-normalité des résidus sauf quand elle est conjuguée avec des données très déséquilibrées c.a.d. des $n_i$ très différents par niveau de facteur (ou $n_{ij}$ dans le cas de deux facteurs) et des variances inconnues $\sigma_i^2$ (ou $\sigma_{ij}^2$ dans le cas de deux facteurs) très différentes.
+
+### Tester l’égalité des variances
+
+Certains logiciels proposent le test classique de Bartlett mais, contrairement aux tests utilisés en analyse de la variance, il est très sensible à la non-normalité, ce qui est le plus souvent le cas. Le logiciel R propose
+le test de Levene que l’on exécute ainsi :  
+
+```{r car_levene}
+library("car")
+leveneTest(y = fromages$pH, group = fromages$citernes:fromages$lignes)
+```
+
+Ici la p.value est quasi nulle donc on rejette l’égalité des variances $\sigma_{ij}^2$, ce qui n’était guère étonnant vu le
+nombre d’ex-aequo par case.
+
+N.B. : le package `car` propose aussi une implémentation du test anova avec sa fonction `Anova(mod, type = c("II","III", 2, 3), ...)`. 
+
+## Test post-hoc
+ 
++ On a détecté un effet citernes. On cherche à savoir quelles sont les citernes qui donnent les mêmes résultats moyens (s’il en existe). On peut utiliser la méthode de Bonferroni : 
+
+```{r posthoc-from}
+pairwise.t.test(x = fromages$pH, g = fromages$citernes, p.adj = "bonf")
+```
+
+Cette instruction fait apparaître les p-valeurs $(C_i, C_j)$ où $p.valeur (C_i, C_j)$ est associée au test $H_0:\mu_{C_i} = \mu_{C_j}$ contre $H_1:\mu_{C_i} \ne \mu_{C_j}$. On rejette $H_0:\mu_{C_i} = \mu_{C_j}$ si $p.valeur (C_i, C_j)<\alpha$ . Cette valeur  $p.valeur (C_i, C_j)$ apparaît au croisement de la colonne $C_i$ et de la ligne $C_j$.  
+
+Ici on rejette $C1=C2, C1=C5, C2=C3, C2=C4, C3=C5, C4=C5$.  
+Par abus de langage, on "accepte" $C1=C3, C1=C4, C2=C5, C3=C4$.  
+On obtient deux groupes $C1, C3, C4$ et $C2, C5$. Dans les publications scientifiques on pourrait présenter les moyennes des groupes a et b ainsi : 
+
+```{r posthocres-from, echo=FALSE}
+kable(t(c("C1"= "5.400000(a)", "C2" = "6.200000(b)", "C3" = "5.300000(a)", "C4" = "5.483333(a)",  "C5" = "6.100000(b)")))
+```
+
+Les moyennes (estimées) pour lesquelles on a accolé la même lettre sont celles pour lesquelles on n’a pas rejeté l’hypothèse d’égalité des moyennes théoriques.  
+
+Les utilisateurs s’accordent pour dire que la méthode de Bonferronni est très "conservative" c.a.d. qu’elle ne met pas assez en évidence les différences. C’est pourquoi il lui est préféré la méthode de Holm que
+l’on exécute par la commande suivante : 
+
+```{r posthocholm-from, echo=FALSE}
+pairwise.t.test(x = fromages$pH, g = fromages$citernes, p.adj = "holm")
+```
+
+Ici elle donne la même conclusion.  
+Pour voir la palette des méthodes possibles, faire `help("p.adjust")`.
+
+
+\newpage
+
+# Sources
+ 
++ Le contenu de ce TP s'est basé sur un extrait du support écrit par [Christophe Chesneau](https://chesneau.users.lmno.cnrs.fr/). 
+
++ le livre [R Cookbook, 2nd Edition,  James (JD) Long, Paul Teetor, 2019-09-26](https://rc2e.com/linearregressionandanova)
+
+Pour aller plus loin :  
+
++ Il existe aussi la fonction `Anova` provenant du package [car](https://www.rdocumentation.org/packages/car/versions/3.0-10) :  https://www.rdocumentation.org/packages/car/versions/3.0-10/topics/Anova
+
