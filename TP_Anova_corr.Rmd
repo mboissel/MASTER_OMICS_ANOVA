@@ -1,7 +1,7 @@
 ---
 title: "TP Analyse de la variance (ANOVA) à un facteur"
 author: "Mathilde Boissel"
-date: "19/10/2020"
+date: "25/10/2021"
 output: word_document
 toc: true 
 toc_depth: 2
@@ -21,6 +21,7 @@ knitr::include_graphics("./Images_includ/logo_univ-lille-large.png")
 
 \newpage 
 
+__Ce TP est prévu sous le logiciel R.__
 
 # Étude de cas 1 : Étude du rendement en jus de 3 variétés de pommes
 
@@ -31,16 +32,17 @@ On se pose la question suivante : **Existe-t-il une différence significative en
 
 On peut construire le tableau de données (`data.frame`) à la main.  
 
-+ Pour ce faire, recopier les commandes suivantes dans R.  
++ <u>Pour ce faire, recopier les commandes suivantes dans R.</u>  
+
 
 ```{r data-pommmes}
-## grouped data
+## data en groupe
 pommes_by_group <- data.frame(
   Golden = c(48,46,52,50),
   Delicious = c(52,50,49,49), 
   Jonagold = c(53,51,55,57)
 )
-## tidy data
+## data en long
 pommes <- data.frame(
   rendement = c(48,46,52,50,52,50,49,49,53,51,55,57),
   variete = factor(rep(c("Golden","Delicious","Jonagold"), rep(4,3)))
@@ -56,25 +58,24 @@ variete_facteur <- gl(n = 3, k = 4, label = c("Golden","Delicious","Jonagold"))
 
 Il y a 3 modalités pour le facteur "variete", 4 répétitions et on donne des noms aux modalités du facteur (pour plus d'informations, voir `help("gl")`). 
 
-+ Noter la différence de présentation des données.  
++ <u>Noter la différence de structure en affichant les données.</u> 
   
 ```{r data-pommmes-show, echo=FALSE, eval = TRUE}
 knitr::kable(
   x = pommes_by_group, 
-  caption = "Visualisation Par Groupe"
+  caption = "Visualisation format Groupe"
 ) 
 knitr::kable(
   x = pommes, 
-  caption = "Visualisation Tidy (Rangée)"
+  caption = "Visualisation format Long"
 ) 
 ```
 
-Les données sont souvent collectées par groupe, alors que pour les traiter dans R nous aurons besoin d'une seule observation par ligne. Il faut alors ranger les données avec chaque variable (ici "rendement" et "variete") en colonne et une ligne par observation.  
-Pour plus d'informations sur le format "tidy", parcourir le chapitre suivant : [tidyverse/12-tidyr](https://juba.github.io/tidyverse/12-tidyr.html)  
+Les données sont souvent collectées par groupe, alors que pour les traiter dans R nous aurons besoin d'une seule observation par ligne. Il faut alors ranger les données avec chaque variable (ici "rendement" et "variete") en colonne et une ligne par observation.    
 
-Pour la suite nous utiliserons le jeu de données nommé "pommes", au format **tidy**.  
+Pour la suite nous utiliserons le jeu de données nommé "pommes", au format **Long**.  
 
-+ S’assurer que la variable à expliquer ("rendement") est numérique et que la variable explicative "variete" est bien un facteur.  
++ <u>S’assurer que la variable à expliquer ("rendement") est numérique et que la variable explicative "variete" est bien un facteur.</u>  
 
 ```{r, str}
 str(pommes)
@@ -92,7 +93,7 @@ La fonction `class` retourne la classe (i.e. le type) d'un objet R.
 
 ## Visualiser et résumer les données
 
-+ Visualiser les données avec le graphique adéquat. `?boxplot`  
++ <u>Visualiser les données avec le graphique adéquat.</u> `?boxplot`  
 
 ```{r viz-pommmes}
 ## base / stats
@@ -102,23 +103,11 @@ points(1:3, means$rendement, col = "red")
 
 ## Puisque les colonnes de l'objet pommes possèdent la bonne classe la fonction plot s'adapte et retourne également le graphique boxplot. 
 # plot(formula = rendement ~ variete, data = pommes)
-
-## ggplot2
-ggplot(
-  data = pommes, 
-  mapping = aes(x = variete, y = rendement, color = variete)
-) + 
-  geom_boxplot() +
-  geom_jitter(shape = 21, position = position_jitter(0.2)) + 
-  stat_summary(fun = mean, geom = "point", shape = 20, color = "firebrick2", fill = "firebrick2", size = 3) +
-  scale_color_viridis_d(end = 0.8) + 
-  theme_bw() + 
-  labs(title = "Boxplot Rendement ~ Varietes")
 ```
 
 On affiche les boxplots des observations correspondant à chaque niveau (modalité) du facteur "variete". Si les boxplots sont décalés, on peut soupçonner un effet du facteur.  
 
-+ Tester les commandes suivantes pour avoir un résumé numérique des données.  
++ <u>Tester les commandes suivantes pour avoir un résumé numérique des données.</u>  
 
 ```{r summary-pommmes}
 summary(pommes$rendement)
@@ -130,12 +119,12 @@ table(pommes$variete)
 Si on sait à l'avance que l'on souhaite compter des effectifs, on peut aussi directement choisir la fonction `table`.  
 N.B. : `table` peut aussi faire des tableaux de contingences si nous regardons plusieurs facteurs.
 
-+ Ces commandes indique-t-elle s'il y a des valeurs manquantes ?  
++ <u>Ces commandes indique-t-elle s'il y a des valeurs manquantes ?</u>  
 
 `summary` précisera le nombre d'observations manquantes dans la colonne `NA's`.  
 `table` n'affiche le nombre d'observations manquantes que si on précise l'option `useNA` avec la valeur "ifany" ou "always".  
 
-+ Résumer les données pour chaque groupe :  
++ <u>Résumer les données pour chaque groupe :</u>  
 effectif, moyenne, ecart-type, données manquantes.  
 `?aggregate ?tapply`
 
@@ -148,29 +137,13 @@ na_group <- aggregate(formula = rendement ~ variete, data = pommes, FUN = functi
 
 ## un exemple avec tapply
 mean_tapply <- tapply(X = pommes$rendement, INDEX = pommes$variete, FUN = mean)
-
-## dplyr (from tidyverse)
-pommes %>% 
-  dplyr::group_by(variete) %>% 
-  dplyr::summarise(
-    n = n(), 
-    mean = mean(rendement), # /!\ mean(, na.rm = TRUE)
-    sd = sd(rendement), # /!\ sd(, na.rm = TRUE)
-    NA_rendement = sum(is.na(rendement))
-  ) %>% 
-  dplyr::ungroup() 
-
-## et encore beaucoup d'autres facon de faire 
-# pommes %>% 
-#   group_by(variete) 
-#   rstatix::get_summary_stats(rendement, type = "mean_sd")
 ``` 
 
 Il faut garder en tête les options par défaut de ces fonctions de base lorsqu'on les applique. Une bonne pratique pourrait être de les rendre explicite à chaque utilisation. Par exemple, faites attention à l'option `na.rm = FALSE` qui indique que les valeurs manquantes ne seront pas supprimées par défaut. Ici le calcul de la moyenne échouerait s'il y avait des valeurs manquantes. 
 
-+ Visuellement, vérifier la normalité de la variable d'intérêt.  
++ <u>Visuellement, vérifier la normalité de la variable d'intérêt.</u>  
 
-```{r norm-pommmes}
+```{r norm-pommes}
 ## With a density plot
 plot(
   density(pommes$rendement), 
@@ -193,20 +166,6 @@ hist(x = pommes$rendement, main = "Histogram")
 ##  with a normal qqplot
 qqnorm(pommes$rendement)
 qqline(pommes$rendement)
-
-## ggplot
-ggplot(data = pommes, mapping = aes(x = rendement)) + 
-  geom_histogram(
-    mapping = aes(y=..density..), 
-    position="identity", binwidth = 2, alpha = 0.5, color = "grey20"
-  ) +
-  geom_density() + 
-  stat_function(
-    fun = dnorm, n = 101, args = list(mean = mr, sd = sdr), 
-    color = "red", 
-    inherit.aes = FALSE
-  ) + 
-  theme(legend.position = "none")
 ```
 
 Si la validation visuelle n'est pas concluante, on peut utiliser le test de Normalité de Shapiro-Wilk comme suit :  
@@ -223,7 +182,7 @@ Pour supposer la normalité des résidus, il est donc nécessaire d’obtenir un
 
 ### Formule
 
-La valeur $rendement_{ik}$ est la valeur du rendement pour le k-ème arbre de la varieté i et $\mu_i$ est la moyenne inconnue des rendements pour la varieté i. 
+La valeur $rendement_{ik}$ est la valeur du rendement pour le k-ème arbre de la varieté i et $\mu_i$ est la moyenne inconnue des rendements pour la variété i. 
 
 L’ANOVA est un modèle régression linéaire qui fait l’hypothèse d’une moyenne par modalité du facteur étudié. Son modèle peut s'écrire :  
 
@@ -261,15 +220,15 @@ Dans R cette formule est écrite ainsi : `rendement ~ variete`.
 
 Le fonction `aov` permet bien de réaliser l'analyse de variance et on voit qu'elle appelle la fonction `lm` pour chaque niveau (les modalités de notre facteur).  
 
-Du coup, `lm` convient aussi pour répondre à notre question puisque nous voulons faire une analyse de variance **à un facteur** (single stratum).  
+Du coup, `lm` convient aussi pour répondre à notre question puisque nous voulons faire une analyse de variance.  
 On comprend que `lm(rendement ~ variete, data = pommes)` est donc équivalent à `aov(formula = rendement~variete, data = pommes)` dans notre cas.  
 La sortie de la fonction `aov` est cependant plus adaptée (more convenient interface) pour répondre à la question de l'ANOVA.  
 
 La fonction `anova` permet de tester la significativité des prédicteurs donc `anova(lm(rendement ~ variete, data = pommes))` répondrait aussi à notre question.  
 
-N.B. : la fonction `anova` permet aussi de tester l'ajout d'un prédicteur entre un modèle nul et un modèle alternatif par exemple (comparison between two or more models), mais ce point ne sera pas abordé ici. 
+N.B. : la fonction `anova` permet aussi de tester l'ajout d'un prédicteur entre un modèle "null" et un modèle alternatif par exemple (comparison between two or more models), mais ce point ne sera pas abordé ici. 
 
-+ Réaliser l'ANOVA qui permet de tester l'effet du facteur "variete" sur la mesure "rendement", et afficher le résumé statistique.  
++ <u>Réaliser l'ANOVA qui permet de tester l'effet du facteur "variete" sur la mesure "rendement", afficher le résumé statistique et conclure.</u>  
 
 ```{r anova-pommmes}
 my_anova <- aov(formula = rendement~variete, data = pommes)
@@ -319,12 +278,12 @@ Lorsqu'on s'est fixé un risque $\alpha$ a priori,
 on rejette $H0$ : "Absence d'effet du facteur" si la $p-valeur < \alpha$.  
 
 Donc, en prenant $\alpha = 0.05$, puisque p.value = 0,02778 < 0:05, on rejette l’hypothèse nulle $H0 : (m1 = m2 = m3)$. Les variétés ont des rendements en jus différents et en disant ceci on n’a que 5 chances sur 100 de se tromper. On conclut en disant qu’il y a un effet variété significatif.  
-N.B. : Cependant si on prend $\alpha = 0.01$, on ne rejette pas H0.  L'effet n'est pas _très_ signifiatif.
+N.B. : Cependant si on prend $\alpha = 0.01$, on ne rejette pas H0.  L'effet n'est pas _très_ significatif.
 
 
 ## Diagnostique
 
-+ Réaliser 4 graphiques diagnostiques de l'anova. 
++ <u>Réaliser 4 graphiques diagnostiques de l'anova et commenter.</u> 
 
 ```{r diag-pommmes}
 par(mfrow=c(2, 2)); plot(my_anova)
@@ -342,9 +301,9 @@ Autre solution : On peut aussi accéder aux résidus du modèle ainsi `my_anova$
 
 ## Test post-hoc
 
-+ Lire la documentation du test HSD de Tukey dans R avec `?TukeyHSD`.  
++ <u>Lire la documentation du test HSD de Tukey dans R</u> avec `?TukeyHSD`.  
 
-+ Réaliser ce test post-hoc.  
++ <u>Réaliser ce test post-hoc.</u>  
 
 ```{r posthoc-pommmes}
 TukeyHSD(x = my_anova)
@@ -352,15 +311,15 @@ par(cex.axis=0.4)
 plot(TukeyHSD(my_anova))
 ```
 
-+ Quelle est la particularité des p-valeurs retournées ?  
++ <u>Quelle est la particularité des p-valeurs retournées ?</u>  
 
 Ce test nous fournit des p-valeurs ajustées dans la colonne "p adj". Il y a d'ores et déjà prise en compte de la correction de tests multiples. 
 
-+ Quelle est la conclusion du test post-hoc ? 
++ <u>Quelle est la conclusion du test post-hoc ?</u> 
 
 C'est la variété "Jonagold" qui possède, en moyenne, un rendement différent des autres.  
 
-+ Pour l'exercice, tester ces autres commandes.  
++ <u>Pour l'exercice, tester ces autres commandes.</u>   
 
 ```{r autres-post-hoc, eval=FALSE}
 # exemple
@@ -383,7 +342,7 @@ Pour réaliser une étude équilibrée, on souhaite vérifier si les critères d
 On se pose la question suivante :  
 **Existe-t-il une différence significative entre ces pays quant à la moyenne des IMC ?**
 
-+ Lire les données. `?read.csv()`
++ <u>Lire les données.</u> `?read.csv()`
 
 ```{r data-imc}
 cohort <- read.csv(
@@ -392,7 +351,7 @@ cohort <- read.csv(
 ) 
 ```
 
-+ Formater les données (avec le bon type) et faire en sorte que la modalité "France" soit la référence. 
++ <u>Formater les données (avec le bon type) et faire en sorte que la modalité "France" soit la référence.</u> 
 
 ```{r type-imc}
 str(cohort)
@@ -404,7 +363,7 @@ Quand un modèle utilise une variable factorielle, il est important de connaitre
 
 N.B. : Quand on réalise une analyse "cas vs control", si on a un phénotype codé 1/0, tout va bien, les controles (0) seront bien pris en référence. Mais on voit le problème si les phénotypes étaient indiqués avec le code "cas" et "control", ici l'ordre alphabétique ne donnera pas la modalité "control" en référence. 
 
-+ Résumer les données pour en voir un aperçu numerique. 
++ <u>Résumer les données pour en voir un aperçu numerique.</u> 
 
 ```{r summary-imc}
 summary(cohort$bmi)
@@ -414,11 +373,11 @@ table(cohort$Pays, useNA = "always")
 Les données `bmi` semble être cohérente (intervalle de valeurs probables) et il y a une donnée manquante qui sera à exclure. 
 Les données `Pays` ont bien comme référence "France" (première modalité), mais il a une modalité vide "". Il semble y avoir un problème...
 
-+ D'où vient le problème avec les données renseignées dans la colonne "Pays"? 
++ <u>'où vient le problème avec les données renseignées dans la colonne "Pays"?</u> 
 
 Il y a une observation manquante correctement lu `<NA>` et une autre qui été renseignée ainsi "", ce qui a été pris pour une valeur. L'option "na.strings" de la fonction `read.csv` que nous avons utilisé plus haut précise bien : pour une colonne de caractères ("strings"), une valeur NA sera interprétée manquante. Donc ici un champ vide n'est pas interprété comme une valeur manquante à la lecture. 
 
-+ Tester les commandes suivantes et expliquer les sorties. 
++ <u>Tester les commandes suivantes et expliquer les sorties.</u> 
 
 ```{r in-imc}
 sum(is.na(cohort$Pays))
@@ -432,7 +391,7 @@ Dans les 3 cas, `sum` va sommer le vecteur booléen retourné par un test. Les v
 `==` réalise un test d'égalité de façon vectorielle avec la valeur "". Mais on voit que la présence de `NA` pose problème pour faire la somme.  
 `%in%` test une inclusion et sait gérer les valeurs NA.  
 
-+ Traiter les valeurs manquantes
++ <u>Traiter les valeurs manquantes</u>
 
 ```{r na-imc}
 # filter NA Pays
@@ -440,12 +399,6 @@ cohort <- cohort[!is.na(cohort$Pays), ]
 cohort <- cohort[!cohort$Pays %in% "", ]
 # filter NA bmi
 cohort <- cohort[!is.na(cohort$bmi), ]
-
-## dplyr 
-cohort <- cohort %>% 
-  filter(!is.na(Pays)) %>% 
-  filter(!Pays %in% "") %>% 
-  filter(!is.na(bmi))
 
 # mise à jour des niveaux
 levels(cohort$Pays)
@@ -460,7 +413,7 @@ Noter que le fait d'enlever des observations n'impacte pas les niveaux de facteu
 
 N.B. : Notre choix ici est de retirer les individus ayant des données manquantes. Remarquer qu'une autre possibilité pourrait être d'imputer ces données (l'imputation est souvent utilisée pour les données génotypiques par exemple). 
 
-+ Visualiser les données (avec tous les noms de pays lisible)
++ <u>Visualiser les données</u> (avec tous les noms de pays lisible).
   
 ```{r box-imc}  
 par(mar=c(7,4,1,1)) 
@@ -468,7 +421,7 @@ par(mar=c(7,4,1,1))
 boxplot(bmi~Pays, data = cohort, las = 2, xlab = "")
 ```
 
-+ Contrôler la normalité de la variable d'intérêt
++ <u>Contrôler la normalité de la variable d'intérêt.<u>
 
 ```{r norm-imc}  
 par(mar=c(5,4,2,1)) 
@@ -477,9 +430,9 @@ plot(density(cohort$bmi), main = "Density")
 shapiro.test(cohort$bmi)
 ```
   
-+ Que faire si notre variable d'intérêt n'est pas normalement distribuée ?
++ <u>Que faire si notre variable d'intérêt n'est pas normalement distribuée ?</u>
 
-Appliquer transformation va résoudre notre problème : ici on va étudier log(bmi).  
+Appliquer transformation peut résoudre notre problème : ici on va étudier log(bmi).  
 
 ```{r log-imc}  
 cohort$log_bmi <- log(cohort$bmi)
@@ -487,7 +440,7 @@ plot(density(cohort$log_bmi), main = "Density")
 shapiro.test(cohort$bmi)
 ```
 
-+ Réaliser l'ANOVA
++ <u>Réaliser l'ANOVA</u>
 
 On rappelle les hypothèses  
 $H0 :$ L'égalité des moyennes entre tous les pays.  
@@ -499,11 +452,11 @@ my_anova_pays <- aov(formula = log_bmi ~ Pays, data = cohort)
 summary(my_anova_pays)
 ```
 
-+ Donner une réponse à la question initiale. 
++ <u>Donner une réponse à la question initiale.</u> 
 
 Dans le résumé, on peut lire la p-valeur dans la colonne "Pr(>F)" valant 0.308. Elle est supérieur à $\alpha = 0.05$ donc **on ne peut pas conclure au rejet** de $H0$.
 
-+ Comment se comporte l'ANOVA, dans R, si notre jeu de données possède des données manquantes ? 
++ <u>Comment se comporte l'ANOVA, dans R, si notre jeu de données possède des données manquantes ?<u> 
 
 `na.action` est une option pour définir comment le modèle doit se comporter avec les données manquantes. Par défaut les observations avec une valeur manquante auraient été supprimées de l'analyse. Mais il est toujours mieux de les traiter soi-même pour avoir connaissance de ses données et des effectifs.  
 
@@ -513,6 +466,82 @@ Pour la preuve de concept, affecter à NA une observation du jeu de données "co
 cohort$log_bmi[1] <- NA
 aov(formula = log_bmi ~ Pays, data = cohort)
 ```
+
+\newpage
+
+# Solutions alternatives avec le tidyverse
+
+Il faut voir le package `tidyverse` comme une boite à outil. En le chargeant vous allez importer plusieurs autres packages. 
+Les données "format long" sont aussi appelées "format tidy", pour plus d'information parcourir le chapitre suivant : tidyverse/12-tidyr
+
+Les données "format long" sont aussi appelées "format tidy", pour plus d'information parcourir le chapitre suivant : [tidyverse/12-tidyr](https://juba.github.io/tidyverse/12-tidyr.html)  
+
+Partant du jeu de données `pommes_by_group` vous pouvez re-structurer vos données en format long, avec des fonctions comme `tidyr::pivot_longer()`. 
+
+La visualisation des données peut aussi de faire avec le package `ggplot2` :
+
+```{r viz-pommmes-gg}
+## ggplot2
+ggplot(
+  data = pommes, 
+  mapping = aes(x = variete, y = rendement, color = variete)
+) + 
+  geom_boxplot() +
+  geom_jitter(shape = 21, position = position_jitter(0.2)) + 
+  stat_summary(fun = mean, geom = "point", shape = 20, color = "firebrick2", fill = "firebrick2", size = 3) +
+  scale_color_viridis_d(end = 0.8) + 
+  theme_bw() + 
+  labs(title = "Boxplot Rendement ~ Varietes")
+```
+
+Pour résumer les données pour chaque groupe, on peut utiliser le package `dplyr` :
+
+```{r groupbysummary-dplyr}
+## dplyr
+pommes %>% 
+  dplyr::group_by(variete) %>% 
+  dplyr::summarise(
+    n = n(), 
+    mean = mean(rendement), # /!\ mean(, na.rm = TRUE)
+    sd = sd(rendement), # /!\ sd(, na.rm = TRUE)
+    NA_rendement = sum(is.na(rendement))
+  ) %>% 
+  dplyr::ungroup() 
+
+## et encore beaucoup d'autres facon de faire 
+# pommes %>% 
+#   group_by(variete) 
+#   rstatix::get_summary_stats(rendement, type = "mean_sd")
+``` 
+
+Un graphique de densité (pour vérifier la normalité d’un variable) peut se faire comme suit : 
+
+```{r norm-pommes-gg}
+## ggplot
+ggplot(data = pommes, mapping = aes(x = rendement)) + 
+  geom_histogram(
+    mapping = aes(y=..density..), 
+    position="identity", binwidth = 2, alpha = 0.5, color = "grey20"
+  ) +
+  geom_density() + 
+  stat_function(
+    fun = dnorm, n = 101, args = list(mean = mr, sd = sdr), 
+    color = "red", 
+    inherit.aes = FALSE
+  ) + 
+  theme(legend.position = "none")
+```
+
+On peut aussi traiter des valeurs manquantes et appliquer des filtres avec le package `dplyr` 
+
+```{r na-imc-dplyr}
+## dplyr 
+cohort <- cohort %>% 
+  filter(!is.na(Pays)) %>% 
+  filter(!Pays %in% "") %>% 
+  filter(!is.na(bmi))
+```
+
 
 \newpage
 
