@@ -1,7 +1,7 @@
 ---
 title: "Analyse de la variance (ANOVA) à un facteur"
 author: "Mathilde Boissel"
-date: "11/10/2020"
+date: "22/10/2021"
 output: word_document
 toc: true 
 toc_depth: 2
@@ -28,7 +28,7 @@ knitr::include_graphics("./Images_includ/logo_univ-lille-large.png")
 On étudie un caractère représenté par une variable $X \sim  \mathcal{N}(\mu, \sigma^2)$. Les échantillons sont issus d’une population normale (gaussienne) : on parle de test **paramétrique**.  
 _N.B.: l'ANOVA non paramétrique, avec le Test de Kruskal–Wallis, ne sera pas abordé dans ce cours._  
 
-On suppose que la population se divise en $p$ sous-population $\mathcal{P}_1, ..., \mathcal{P}_n$.  
+On suppose que la population se divise en $p$ sous-population $\mathcal{P}_1, ..., \mathcal{P}_p$.  
 Ainsi, $\forall i \in \{1, .., p\}$, la variable $X$ considérée dans $\mathcal{P}_i$, est une variable 
 $$X_i \sim  \mathcal{N}(\mu_i, \sigma_i^2).$$
 
@@ -40,22 +40,22 @@ Les individus sont tous différents; les échantillons sont indépendants.
 
 ### Enjeu {-}
 
-L'enjeu d'un test ANOVA est d'affirmer, avec un faible risque de se tromper, que $\mathcal{P}_1, ..., \mathcal{P}_n$ ne sont pas homogènes quant à $\mu$.  
+L'enjeu d'un test ANOVA est d'affirmer, avec un faible risque de se tromper, que $\mathcal{P}_1, ..., \mathcal{P}_p$ ne sont pas homogènes quant à $\mu$.  
 Pour ce faire, on compare les moyennes $\mu_1, ..., \mu_p$ via un test statistique.  
 
 ### Notion de facteur {-}
 
 $\forall i \in \{1, .., p\}$, $\mathcal{P}_i$ peut être associée à une modalité $A_i$ d'un caractère $A$ appelé facteur.  
-Comparer $\mathcal{P}_1, ..., \mathcal{P}_n$ quant à $\mu$ revient à étudier l'influence du facteur $A$ (caractérisé par ses $p$ modalités $A_1, ..., A_p$) sur $\mu$.  
+Comparer $\mathcal{P}_1, ..., \mathcal{P}_p$ quant à $\mu$ revient à étudier l'influence du facteur $A$ (caractérisé par ses $p$ modalités $A_1, ..., A_p$) sur $\mu$.  
 $\mu$ est ici la moyenne d'une variable (numerique) d'intérêt $X$.  
 Les données de $X$ peuvent donc être mises sous la forme :  
 
 ```{r tab-data, echo=FALSE, results='asis', fig.align='center'}
 tibble(
-  "A1" = c("$x_{1,1}$", "$x_{2,1}$", "...", "...", "...", "..."),
-  "A2" = c("$x_{1,2}$", "$x_{2,2}$", "...", "...", "...", "$x_{n_2, 2}$"),
-  "Ai" = c("$x_{1,i}$", "$x_{2,i}$", "$x_{j,i}$", "...", "...", "..."),
-  "Ap" = c("$x_{1,p}$", "$x_{1,p}$", "...", "", "...", "$x_{p,n_p}$"),
+  "$A_1$" = c("$x_{1,1}$", "$x_{2,1}$", "...", "...", "...", "..."),
+  "$A_2$" = c("$x_{1,2}$", "$x_{2,2}$", "...", "...", "...", "$x_{n_2, 2}$"),
+  "$A_i$" = c("$x_{1,i}$", "$x_{2,i}$", "$x_{j,i}$", "...", "...", "..."),
+  "$A_p$" = c("$x_{1,p}$", "$x_{1,p}$", "...", "", "...", "$x_{n_p,p}$"),
 ) %>% 
   kable()
   # kable(full_width = F)
@@ -171,16 +171,16 @@ Quatre éléments sont à contrôler. Cela peut se faire graphiquement.
 
 On considère les hypothèses : 
 
-+ **Residuals vs Fitted** et **Constant Leverage: Residuals vs Factor Levels**  
++ **"Residuals vs Fitted"** et **"Constant Leverage: Residuals vs Factor Levels"**  
 
 Les résidus sont indépendants. Les résidus ne doivent pas être corrélés entre eux. De la même façon, les résidus ne doivent pas être corrélés au facteur étudié.
 On peut faire le test de Dubin-Watson pour vérifier l'autocorrélation des résidus mais souvent un contrôle graphique suffit.  
 
-+ **Normal Q-Q**  
++ **"Normal Q-Q"**  
 
 Les résidus suivent une loi normale de moyenne 0. Pour vérifier cette hypothèse on peut faire un test de normalité comme le test de Shapiro-Wilk mais on préfère vérifier cela graphiquement avec un diagramme Quantile-Quantile (i.e. QQ-plot, graphique dans lequel les quantiles de deux distributions sont tracés l’un par rapport à l’autre).
 
-+ **Scale-Location**  
++ **"Scale-Location"**  
 
 L’homogénéité des variances. Les résidus relatifs aux différentes modalités sont homogènes (ils ont globalement la même dispersion), autrement dit leur variance est constante.
 On peut vérifier cela graphiquement en représentant les résidus standardisés en fonction des valeurs prédites (les moyennes des différents traitements). En cas de doute on pourra aussi valider cette hypothèse avec un test statistique (Cochran, Bartlett, Levene...).
@@ -253,9 +253,9 @@ par(mfrow=c(2, 2)); plot(anova)
 
 \newpage 
 
-### "Mauvais" diagnostique {-}
+### Exemple de "mauvais" diagnostique {-}
 
-Pour bien se rendre compte que ces précédents exemples sont signe de bon diagnostique, on peut les confronter à des graphiques qui devraient vous alarmer, signe de "mauvais" diagnostique.  
+Pour bien se rendre compte que ces précédents exemples sont signes de bon diagnostic, on peut les confronter à des graphiques qui devraient vous alarmer, signe de "mauvais" diagnostique.  
 
 Dans le graph **Residuals vs Fitted**, la ligne rouge n'est pas une droite horizontale proche de Y=0.     
 Dans le graph  **Normal Q-Q**, les points observés s'éloignent franchement de la droite théorique. (On pourrait aussi voir ce problème en faisant le graphique de densité des résidus, alors nous n'aurions certainement pas "une cloche" comme attendu avec le loi Normale)  
@@ -288,7 +288,7 @@ On s'intéresse ici à ce point en particulier : Les variances conditionnelles (
 
 ### Enjeu {-}
 
-L'enjeu d'un test d'homogénéité pour $\sigma^2$ est d'affirmer, avec un faible risque de se tromper, que  $\mathcal{P}_1, ..., \mathcal{P}_n$ ne sont pas homogènes quant à $\sigma^2$.  
+L'enjeu d'un test d'homogénéité pour $\sigma^2$ est d'affirmer, avec un faible risque de se tromper, que  $\mathcal{P}_1, ..., \mathcal{P}_p$ ne sont pas homogènes quant à $\sigma^2$.  
 Pour ce faire, on compare les variances $\sigma_1^2, ..., \sigma_p^2$ via un test statistique. 
   
 ### Hypothèses {-}
