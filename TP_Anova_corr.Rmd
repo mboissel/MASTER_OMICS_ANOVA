@@ -1,7 +1,7 @@
 ---
 title: "TP Analyse de la variance (ANOVA) à un facteur"
 author: "Mathilde Boissel"
-date: "25/10/2021"
+date: "21/10/2022"
 output: word_document
 toc: true 
 toc_depth: 2
@@ -88,8 +88,8 @@ class(pommes$variete)
 ```
 
 `str` procède à l'affichage compact de la structure interne d’un objet R.  
-Les fonctions `is.[type]` testent le `[type]` d'un objet R et retourne une valeur booléenne.  
-La fonction `class` retourne la classe (i.e. le type) d'un objet R.  
+Les fonctions `is.[type]` testent le `[type]` d'un objet R et retourne une valeur booléenne. Ici comprenez que `[type]` est à remplacer par la classe que vous voulez tester.  
+La fonction `class` retourne la classe (i.e. le type) d'un objet R. En exécutant la commande `?class` vous pouvez avoir une idée de quelques types existant par exemple. 
 
 ## Visualiser et résumer les données
 
@@ -123,6 +123,7 @@ N.B. : `table` peut aussi faire des tableaux de contingences si nous regardons p
 
 `summary` précisera le nombre d'observations manquantes dans la colonne `NA's`.  
 `table` n'affiche le nombre d'observations manquantes que si on précise l'option `useNA` avec la valeur "ifany" ou "always".  
+Pour avoir cette réponse, nous pouvons soit lire la documentation de `?table` soit directement faire l'expérience sur une petit vecteur test `table(c(1, 2, 3, NA))`.
 
 + <u>Résumer les données pour chaque groupe :</u>  
 effectif, moyenne, ecart-type, données manquantes.  
@@ -559,7 +560,8 @@ https://statistique-et-logiciel-r.com/anova-a-un-facteur-partie-2-la-pratique/
 
 Pour aller plus loin :  
 
++ [One Way ANOVA with R](https://bcdudek.net/anova/oneway_anova_basics.pdf) (oneway_anova_basics.pdf), Bruce Dudek, 2021-03-01.
+
 + Pas utilisé ici, mais il existe aussi la fonction `Anova` provenant du package [car](https://www.rdocumentation.org/packages/car/versions/3.0-10) :  https://www.rdocumentation.org/packages/car/versions/3.0-10/topics/Anova
 
 + Pas utilisé ici, mais il existe aussi ce package `DescTools` qui propose la fonction `PostHocTest` pour réaliser les tests post-hoc : https://www.rdocumentation.org/packages/DescTools/versions/0.99.38/topics/PostHocTest
-
