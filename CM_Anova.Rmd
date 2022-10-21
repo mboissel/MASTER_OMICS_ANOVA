@@ -626,7 +626,9 @@ Ainsi, au risque 5%, on peut affirmer que _S1_, _S2_ et _S3_ sont perçues de ma
 + Pour _G2_, on a $f_{obs} = 1.6579 < 4.26$, alors on ne rejette pas $H_0$.  
 Ainsi, au risque 5%, on ne peut pas affirmer que _S1_, _S2_ et _S3_ sont perçues de manière différente par les consommateurs.  
 
-Au final, vu le résultat de G1, on peut affirmer, au risque 5%, que _S1_, _S2_ et _S3_ sont perçues de manières différente par les consommateurs. 
+Au final, vu le résultat de G1, on peut affirmer, au risque 5%, que _S1_, _S2_ et _S3_ sont perçues de manières différente par les consommateurs.  
+
+La conclusion formelle vis à vis de G2 est que **nous ne pouvons pas conclure** à une différence de moyenne (car non reget de H0). Nous aurions naturellement envie de comprendre, par déduction logique, que donc les moyennes sont homogènes... C'est possible ou pas. Gardez en tête que la conclusion est "nous ne pouvons pas conclure au rejet de l'hypothèse nulle". 
 
 \newpage 
 
@@ -943,4 +945,3 @@ Des lectures complémentaires pourront vous intéresser :
 + Fisher RA. [Statistical Methods for Research Workers](https://link.springer.com/chapter/10.1007/978-1-4612-4380-9_6). Edinburgh, United Kingdom: Oliver & Boyd; 1925.  
 
 + Sur [link.springer](https://link.springer.com/search?query=anova) ou de nombreux autres supports de cours sur internet... 
-
